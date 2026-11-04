@@ -17,13 +17,15 @@ type Props = {
   size?: "sm" | "lg";
   /** Speak the line aloud when it changes. */
   talk?: boolean;
+  /** Shows a thinking bubble while a reply is on its way. */
+  thinking?: boolean;
 };
 
 /**
  * A talking clue object. It breathes while idle, blinks, bounces on every
  * word it says, and its speech bubble types out in time with its voice.
  */
-export function Character({ name, art, crop, hiding = false, line, voice = "warm", size = "lg", talk = true }: Props) {
+export function Character({ name, art, crop, hiding = false, line, voice = "warm", size = "lg", talk = true, thinking = false }: Props) {
   const [shown, setShown] = useState(0);
   const [speaking, setSpeaking] = useState(false);
   const [muted, setMute] = useState(false);
@@ -90,7 +92,20 @@ export function Character({ name, art, crop, hiding = false, line, voice = "warm
       </motion.div>
 
       <AnimatePresence mode="wait">
-        {line ? (
+        {thinking ? (
+          <motion.div
+            key="thinking"
+            className="mb-3 flex gap-1.5 rounded-2xl rounded-bl-sm border border-ink-line bg-night-raised px-4 py-4"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            aria-label={`${name} is thinking`}
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.span key={i} className="size-2 rounded-full bg-lantern" animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.14 }} />
+            ))}
+          </motion.div>
+        ) : line ? (
           <motion.div
             key={line}
             className="relative mb-3 min-w-0 flex-1 rounded-2xl rounded-bl-sm border border-ink-line bg-night-raised px-4 py-3"

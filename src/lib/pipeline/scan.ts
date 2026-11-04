@@ -150,11 +150,11 @@ export async function maskObject(game: Game, object: RoomObject, trace?: Trace):
 /* ---------- Step 3: re-read every detail from a close-up (Muse Spark 1.3) ---------- */
 
 const SecondReading = z.object({
-  answers: z.array(z.object({ objectId: z.string(), about: z.string(), value: z.string() })),
+  answers: z.array(z.object({ q: z.string(), value: z.string() })),
 });
 
 const CHECK_SYSTEM = `You check details of objects in close-up photos for a treasure-hunt game. A puzzle will only use a detail if your reading matches an earlier one, so be strict.
-For each question, look only at the matching close-up and answer with the value you see. If you cannot see it clearly, answer "unsure". Never guess.`;
+For each numbered question, look only at the close-up just above it and answer with the value you see, in a few words. Copy the question number exactly into "q" (for example "q7"). Answer every question. If you cannot see it clearly, answer "unsure". Never guess.`;
 
 export type Crop = { objectId: string; dataUrl: string };
 
@@ -164,12 +164,19 @@ export async function checkDetails(game: Game, crops: Crop[], trace?: Trace): Pr
     .filter((t): t is { crop: Crop; object: RoomObject } => Boolean(t.object && t.object.facts.length));
   if (!targets.length) return;
 
+  // Questions are numbered so answers match back even when the model rewords them.
   const parts = [];
+  const questions = new Map<string, { object: RoomObject; index: number }>();
   for (const { crop, object } of targets) {
     const [, mime, b64] = crop.dataUrl.match(/^data:([^;]+);base64,(.+)$/) ?? [];
     if (b64) object.crop = await storeImage(`crops/${game.id}/${object.id}.jpg`, Buffer.from(b64, "base64"), mime);
-    parts.push(text(`Close-up of the ${object.name} (objectId ${object.id}). Questions:\n${object.facts.map((f) => `- ${f.about} (${f.kind})`).join("\n")}`));
     parts.push(image(crop.dataUrl));
+    const lines = object.facts.map((f, index) => {
+      const q = `q${questions.size + 1}`;
+      questions.set(q, { object, index });
+      return `${q}: ${f.about} (${f.kind})`;
+    });
+    parts.push(text(`Close-up of the ${object.name}. Questions about it:\n${lines.join("\n")}`));
   }
 
   const reply = await askJSON({
@@ -182,16 +189,16 @@ export async function checkDetails(game: Game, crops: Crop[], trace?: Trace): Pr
     effort: "low",
     timeoutMs: 45_000,
     trace,
-    mock: () => mockSecondReading(targets.map((t) => t.object)),
+    mock: () => mockSecondReading([...questions.entries()].map(([q, { object, index }]) => ({ q, fact: object.facts[index] }))),
   });
 
+  for (const answer of reply.answers) {
+    const q = questions.get(answer.q.trim().toLowerCase().replace(/^(\d+)$/, "q$1"));
+    if (!q) continue;
+    const fact = q.object.facts[q.index];
+    fact.verified = readingsAgree(fact.kind, fact.value, answer.value);
+  }
   for (const { object } of targets) {
-    for (const fact of object.facts) {
-      const answer = reply.answers.find(
-        (a) => a.objectId === object.id && a.about.trim().toLowerCase() === fact.about.trim().toLowerCase(),
-      );
-      fact.verified = Boolean(answer && readingsAgree(fact.kind, fact.value, answer.value));
-    }
     if (object.status === "masked" && object.facts.some((f) => f.verified)) object.status = "verified";
   }
 }

@@ -9,6 +9,7 @@ import { Character } from "./Character";
 import { CameraFinder, type FindResult, type Shot } from "./CameraFinder";
 import { RoomTapper } from "./RoomTapper";
 import { UnlockBurst } from "./UnlockBurst";
+import { TalkBar } from "./TalkBar";
 import { postJSON } from "@/lib/client/game";
 import { cue } from "@/lib/client/player";
 import type { PlayerGame } from "@/lib/game/view";
@@ -44,6 +45,7 @@ const TYPE_LABEL: Record<string, string> = {
 export function StationScreen({ gameId, game, station, board, index, player, onBoard, onClose }: Props) {
   const [line, setLine] = useState(station.character.greeting);
   const [busy, setBusy] = useState(false);
+  const [thinking, setThinking] = useState(false);
   const [solvedDigit, setSolvedDigit] = useState<number | undefined>(board.solved ? board.digit : undefined);
   const [camera, setCamera] = useState(false);
   const [tapping, setTapping] = useState(false);
@@ -125,7 +127,10 @@ export function StationScreen({ gameId, game, station, board, index, player, onB
         </header>
 
         <h1 className="font-display text-[2rem] leading-tight">{station.title}</h1>
-        <Character name={station.character.name} art={art} crop={crop} hiding={hiding} voice={station.character.voice} line={line} />
+        <div className="flex flex-col gap-4">
+          <Character name={station.character.name} art={art} crop={crop} hiding={hiding} voice={station.character.voice} line={line} thinking={thinking} />
+          <TalkBar gameId={gameId} stationId={station.id} player={player} name={station.character.name} onReply={setLine} onThinking={setThinking} />
+        </div>
 
         {solvedDigit !== undefined ? (
           <div className="relative flex flex-col items-center gap-4 py-8">

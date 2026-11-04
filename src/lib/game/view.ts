@@ -1,4 +1,5 @@
 import type { Game } from "./schema";
+import { makingOf } from "./making";
 
 /**
  * What a player's phone may see. Answers, hints, the final code, the
@@ -12,6 +13,7 @@ export function playerView(game: Game) {
   void _progress;
   return {
     ...rest,
+    makingOf: makingOf(game),
     room: {
       summary: room.summary,
       frames: room.frames,
@@ -56,5 +58,5 @@ export type PlayerGame = ReturnType<typeof playerView>;
 export function hostView(game: Game) {
   const { hostKey: _key, ...rest } = game;
   void _key;
-  return rest;
+  return { ...rest, makingOf: makingOf(game) };
 }

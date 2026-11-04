@@ -54,14 +54,8 @@ export function mockInventory(frameCount: number): InventoryReply {
 }
 
 /** Agrees with the first reading except for one detail, so the dropping path is exercised. */
-export function mockSecondReading(objects: RoomObject[]) {
+export function mockSecondReading(questions: { q: string; fact: RoomObject["facts"][number] }[]) {
   return {
-    answers: objects.flatMap((o) =>
-      o.facts.map((f) => ({
-        objectId: o.id,
-        about: f.about,
-        value: f.about === "number of large leaves" ? "9" : f.value,
-      })),
-    ),
+    answers: questions.map(({ q, fact }) => ({ q, value: fact.about === "number of large leaves" ? "9" : fact.value })),
   };
 }

@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { Button } from "@/components/ui/Button";
 import { CodeLock } from "@/components/ui/CodeLock";
 import { PaperCard } from "@/components/ui/PaperCard";
+import { MakingOf } from "@/components/game/MakingOf";
 import { StationScreen, type Board } from "@/components/play/StationScreen";
 import { UnlockBurst } from "@/components/play/UnlockBurst";
 import { fetchGame, postJSON } from "@/lib/client/game";
@@ -331,6 +332,7 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
                 Send this room to a friend
               </Button>
             ) : null}
+            {game.makingOf ? <MakingOf steps={game.makingOf} /> : null}
             <Link href="/" className="text-center text-text-soft underline decoration-ink-line underline-offset-4">
               Make a hunt for another room
             </Link>
