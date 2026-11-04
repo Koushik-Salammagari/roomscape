@@ -91,7 +91,7 @@ export function isRetryable(error: unknown): boolean {
 }
 
 /** Retries a call up to `tries` times with a short backoff when the failure is retryable. */
-export async function retrying<T>(fn: () => Promise<T>, tries = 3, onRetry?: (error: unknown) => void): Promise<T> {
+export async function retrying<T>(fn: () => Promise<T>, tries = 4, onRetry?: (error: unknown) => void): Promise<T> {
   let last: unknown;
   for (let attempt = 0; attempt < tries; attempt += 1) {
     try {
@@ -100,7 +100,7 @@ export async function retrying<T>(fn: () => Promise<T>, tries = 3, onRetry?: (er
       last = error;
       if (error instanceof ModelTimeoutError || !isRetryable(error) || attempt === tries - 1) throw error;
       onRetry?.(error);
-      await sleep(1500 * 3 ** attempt);
+      await sleep(2000 * 3 ** attempt);
     }
   }
   throw last;
