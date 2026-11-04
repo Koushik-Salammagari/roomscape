@@ -6,6 +6,7 @@ import { Redis } from "@upstash/redis";
 import { env, hasBaseten, mockModels } from "@/lib/env";
 import { askJSON, generateImage, image, segmentImage, text, transcribe } from "@/lib/models";
 import { storeImage } from "@/lib/store";
+import { metaClient } from "@/lib/models/runtime";
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
@@ -41,6 +42,10 @@ export async function POST(req: Request) {
   const Objects = z.object({ objects: z.array(z.object({ name: z.string(), detail: z.string() })) });
 
   await Promise.all([
+    run("models", async () => {
+      const list = await metaClient().models.list();
+      return list.data.map((m) => m.id);
+    }),
     run("spark", () =>
       askJSON({
         engine: "spark",
