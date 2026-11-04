@@ -11,17 +11,17 @@
 1. **Scan.** Walk the room for 20 seconds, or upload 4 to 8 photos.
 2. **Host (optional).** Tap where the gift is hidden. Pin objects you want clues on, block anything off limits, and add the player's name, the occasion and inside jokes.
 3. **Build.** About two minutes later you have a titled story, five characters living in your objects, and a chain of puzzles.
-4. **Play.** Each clue is a character. Find the object it describes with the camera or by tapping the photos, read a number off a real object, crack a cipher, or solve a logic teaser. You can hold the mic and talk to any character. Every solved clue gives one digit of the final lock.
+4. **Play.** Each clue lives in a real object: "Go and talk to the coffee table book." Walk over and point your camera at it. SAM 3.1 finds it in the live picture, and the object wakes up: eyes and a mouth appear on it, the real thing sways or bobs as it talks, and it gives you its puzzle out loud. Hold the mic to ask it anything. Look away and it falls still. Riddle clues hide their object: work out which thing the riddle means and find it with the camera. Every solved clue gives one digit of the final lock, and tells you where to go next.
 5. **Share.** Send the room to a friend anywhere: they play by tapping your photos.
 
-Three ways to play: **Quick play** (the story hides a digital treasure), **Host a hunt** (a real gift, a real spot) and **Remote** (someone else's room, by link).
+Two stories: **Treasure hunt** (a sea captain's hidden gold) and **Murder mystery** (Lord Ashby was poisoned at dinner, and the furniture are the witnesses). Three ways to play: **Quick play** (the story hides a digital treasure), **Host a hunt** (a real gift, a real spot) and **Remote** (someone else's room, by link).
 
 ## Six Meta models, each doing what it is best at
 
 | Model | What it does in Roomscape |
 | --- | --- |
 | **Muse Spark 1.3** | Reads the scan photos and lists 12 to 18 objects with checkable details. Looks at every close-up a **second time**: a detail is only used in a puzzle if both readings agree. Then **plays every riddle blind**, without the answer, before the player sees it. |
-| **SAM 3.1** | Traces the exact outline of every object from Spark's description. The outlines draw the scan animation, make taps checkable, crop each object for the second reading, and confirm photo answers during play. |
+| **SAM 3.1** | Traces the exact outline of every object from Spark's description. The outlines draw the scan animation, make taps checkable and crop each object for the second reading. During play it tracks the clue's object in the live camera about once a second: a WebGL shader moves the real pixels inside SAM's mask, so the object itself sways and talks, and falls still when it leaves the frame. |
 | **Muse Wonder 1.0** | Designs the game: story, characters with personas and voices, puzzles across five types, three graded hints each, unlock order and the ending. In a hosted hunt, the last clue points to the gift. |
 | **Muse Image 1.0** | Paints the room itself into the story's world, turns each clue object into a character portrait, and draws the torn-picture clues, all from the real photos. |
 | **Muse Spark Open** | Plays each character live when the player talks to it, without ever giving the answer away, and judges photo answers ("is this the same object?"). Runs on Baseten; falls back to Spark 1.3 without a key. |
