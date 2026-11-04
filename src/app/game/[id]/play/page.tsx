@@ -29,6 +29,9 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [player] = useState(() => (typeof window === "undefined" ? "" : playerId()));
   const [game, setGame] = useState<PlayerGame | null>(null);
+  // Remote players are in someone else's room: they find things by tapping the photos.
+  const [remote, setRemote] = useState(false);
+  useEffect(() => setRemote(new URLSearchParams(window.location.search).has("remote")), []);
   const [board, setBoard] = useState<Board | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
   const [openStation, setOpenStation] = useState<string | null>(null);
@@ -350,6 +353,7 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
             board={board.stations.find((s) => s.id === openStation)!}
             index={plan.stations.findIndex((s) => s.id === openStation)}
             player={player}
+            remote={remote}
             onBoard={setBoard}
             onClose={() => setOpenStation(null)}
           />
@@ -360,7 +364,7 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
 }
 
 async function shareRoom(id: string, title: string) {
-  const url = `${window.location.origin}/game/${id}/play`;
+  const url = `${window.location.origin}/game/${id}/play?remote=1`;
   try {
     if (navigator.share) await navigator.share({ title, text: "I solved the mystery in my room. Can you?", url });
     else await navigator.clipboard.writeText(url);

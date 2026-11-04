@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 
-/** Judges' shortcut: a ready-made room they can play without scanning. */
+/** A real room built with the real models, so anyone can play without scanning. */
+const DEMO_GAME_ID = process.env.DEMO_GAME_ID || "g_Zvmez17d15";
+
 export default function Demo() {
-  const id = process.env.DEMO_GAME_ID;
-  redirect(id ? `/game/${id}/play` : "/");
+  redirect(`/game/${DEMO_GAME_ID}/play?remote=1`);
 }

@@ -30,6 +30,8 @@ type Props = {
   board: BoardStation;
   index: number;
   player: string;
+  /** Playing someone else's room: tap the photos instead of using the camera. */
+  remote?: boolean;
   onBoard: (b: Board) => void;
   onClose: () => void;
 };
@@ -42,13 +44,13 @@ const TYPE_LABEL: Record<string, string> = {
   "picture-fragment": "Torn picture",
 };
 
-export function StationScreen({ gameId, game, station, board, index, player, onBoard, onClose }: Props) {
+export function StationScreen({ gameId, game, station, board, index, player, remote = false, onBoard, onClose }: Props) {
   const [line, setLine] = useState(station.character.greeting);
   const [busy, setBusy] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [solvedDigit, setSolvedDigit] = useState<number | undefined>(board.solved ? board.digit : undefined);
   const [camera, setCamera] = useState(false);
-  const [tapping, setTapping] = useState(false);
+  const [tapping, setTapping] = useState(remote);
   const [hints, setHints] = useState<string[]>(board.shownHints);
   const shake = useAnimationControls();
   const foundDigit = useRef<number | undefined>(undefined);
@@ -186,12 +188,18 @@ export function StationScreen({ gameId, game, station, board, index, player, onB
 
             {isHunt ? (
               <div className="flex flex-col gap-3">
-                <Button onClick={() => setCamera(true)} className="min-h-14 w-full text-lg">
-                  Find it with the camera
-                </Button>
-                <Button variant="quiet" onClick={() => setTapping((t) => !t)}>
-                  {tapping ? "Hide the room photos" : "Tap it in the room photos"}
-                </Button>
+                {remote ? (
+                  <p className="text-sm text-text-soft">Tap the thing the clue describes in one of the room photos.</p>
+                ) : (
+                  <>
+                    <Button onClick={() => setCamera(true)} className="min-h-14 w-full text-lg">
+                      Find it with the camera
+                    </Button>
+                    <Button variant="quiet" onClick={() => setTapping((t) => !t)}>
+                      {tapping ? "Hide the room photos" : "Tap it in the room photos"}
+                    </Button>
+                  </>
+                )}
                 {tapping ? (
                   <RoomTapper frames={game.room.frames} busy={busy} onTap={(t) => submit({ kind: "tap", ...t })} />
                 ) : null}
