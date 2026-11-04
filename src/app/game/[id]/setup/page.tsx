@@ -62,7 +62,7 @@ export default function HostSetup({ params }: { params: Promise<{ id: string }> 
 
   const colors = useMemo(() => {
     const c: Record<string, string> = {};
-    for (const o of usable) c[o.id] = "var(--text-soft)";
+    for (const o of usable) c[o.id] = "rgba(255,255,255,0.9)";
     for (const p of pinned) c[p] = "var(--tide)";
     for (const b of blocked) c[b] = "var(--danger)";
     if (gift) c[gift] = "var(--lantern)";
@@ -98,6 +98,12 @@ export default function HostSetup({ params }: { params: Promise<{ id: string }> 
       .filter((o) => o.frame === frame && x >= o.box.left && x <= o.box.right && y >= o.box.top && y <= o.box.bottom)
       .sort((a, b) => (a.box.right - a.box.left) * (a.box.bottom - a.box.top) - (b.box.right - b.box.left) * (b.box.bottom - b.box.top));
     if (hits[0]) apply(hits[0]);
+    else toast.show("Nothing outlined there. Pick it from the list below the photos.");
+  };
+
+  const pick = (o: RoomObject) => {
+    setFrame(o.frame);
+    apply(o);
   };
 
   const save = async () => {
@@ -162,7 +168,7 @@ export default function HostSetup({ params }: { params: Promise<{ id: string }> 
           </button>
         ))}
       </div>
-      <p className="-mt-3 text-sm text-text-soft">{active.line}</p>
+      <p className="-mt-3 text-sm text-text-soft">{active.line} Tap an outline in a photo, or pick from the list.</p>
 
       <div className="flex flex-col gap-3">
         <div
@@ -187,10 +193,38 @@ export default function HostSetup({ params }: { params: Promise<{ id: string }> 
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={fr.url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <span className="absolute right-0.5 bottom-0.5 rounded bg-night-deep/85 px-1 font-mono text-[0.65rem]">{usable.filter((o) => o.frame === i).length}</span>
             </button>
           ))}
         </div>
       </div>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold">Everything Roomscape found ({usable.length})</h2>
+        <div className="flex flex-wrap gap-2">
+          {usable.map((o) => {
+            const role = gift === o.id ? "var(--lantern)" : pinned.includes(o.id) ? "var(--tide)" : blocked.includes(o.id) ? "var(--danger)" : undefined;
+            return (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => pick(o)}
+                className={clsx("flex min-h-10 items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm", role ? "bg-night-raised font-semibold" : "border-ink-line text-text-soft")}
+                style={role ? { borderColor: role } : undefined}
+                aria-pressed={Boolean(role)}
+              >
+                {o.crop ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={o.crop} alt="" className="size-8 rounded-full object-cover" />
+                ) : (
+                  <span className="grid size-8 place-items-center rounded-full bg-night-deep font-mono text-[0.65rem]">{o.frame + 1}</span>
+                )}
+                {o.name}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="flex flex-col gap-3 rounded-3xl border border-ink-line bg-night-raised/60 p-4">
         <Row color="var(--lantern)" label="Gift spot" value={nameOf(gift) ?? "Not chosen yet"} />
