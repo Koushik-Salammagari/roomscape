@@ -1,6 +1,6 @@
 import { mockModels } from "@/lib/env";
 import { MODELS } from "./ids";
-import { metaClient, sleep, timed, type Trace } from "./runtime";
+import { metaClient, retrying, sleep, timed, type Trace } from "./runtime";
 
 /** The shared look that keeps every generated image in one storybook. */
 export const STORYBOOK_STYLE =
@@ -32,10 +32,12 @@ export async function generateImage(opts: ImageOptions): Promise<GeneratedImage>
   return timed({ model: "image", task: opts.task, ms: opts.timeoutMs ?? 45_000, trace: opts.trace }, async (signal) => {
     const content: Record<string, string>[] = [{ type: "input_text", text: `${opts.prompt}\n\nStyle: ${STORYBOOK_STYLE}` }];
     for (const url of opts.references ?? []) content.push({ type: "input_image", image_url: url });
-    const res = (await metaClient().responses.create(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { model: MODELS.image, input: [{ role: "user", content }], store: false } as any,
-      { signal },
+    const res = (await retrying(() =>
+      metaClient().responses.create(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        { model: MODELS.image, input: [{ role: "user", content }], store: false } as any,
+        { signal },
+      ),
     )) as unknown as { output: ResponseOutputItem[] };
     const result = res.output.find((item) => item.type === "image_generation_call")?.result;
     if (!result) throw new Error(`${opts.task}: Muse Image returned no image.`);

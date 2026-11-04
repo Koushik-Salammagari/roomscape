@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { hasBaseten, mockModels, env } from "@/lib/env";
 import { MODELS, type ModelName } from "./ids";
-import { basetenClient, metaClient, sleep, timed, type Trace } from "./runtime";
+import { basetenClient, isRetryable, metaClient, retrying, sleep, timed, type Trace } from "./runtime";
 
 /** A piece of a user message: text or an image (https or data URL). */
 export type Part = { type: "text"; text: string } | { type: "image"; url: string };
@@ -53,10 +53,30 @@ export function extractJSON(reply: string): unknown {
   return JSON.parse(body.slice(start, end + 1));
 }
 
-function route(engine: Engine): { client: ReturnType<typeof metaClient>; model: string; name: ModelName } {
+/** Spark 1.2 stands in when Spark 1.3 keeps answering "model not found". */
+const SPARK_BACKUP = "muse-spark-1.2";
+
+function route(engine: Engine, backup = false): { client: ReturnType<typeof metaClient>; model: string; name: ModelName } {
   if (engine === "sparkOpen" && hasBaseten) return { client: basetenClient(), model: env.sparkOpenModel, name: "sparkOpen" };
   if (engine === "wonder") return { client: metaClient(), model: MODELS.wonder, name: "wonder" };
-  return { client: metaClient(), model: MODELS.spark, name: "spark" };
+  return { client: metaClient(), model: backup ? SPARK_BACKUP : MODELS.spark, name: "spark" };
+}
+
+/** Sends one chat request with retries; Spark falls back to 1.2 if 1.3 stays unavailable. */
+async function chat(engine: Engine, body: Record<string, unknown>, signal: AbortSignal): Promise<string> {
+  const send = (backup: boolean) =>
+    retrying(async () => {
+      const { client, model } = route(engine, backup);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await client.chat.completions.create({ ...body, model } as any, { signal });
+      return (res as OpenAIChat).choices[0]?.message?.content ?? "";
+    });
+  try {
+    return await send(false);
+  } catch (error) {
+    if (engine === "spark" && isRetryable(error)) return send(true);
+    throw error;
+  }
 }
 
 async function callOnce(
@@ -64,10 +84,9 @@ async function callOnce(
   opts: AskOptions<z.ZodType>,
   repair: string | undefined,
 ): Promise<string> {
-  const { client, model, name } = route(engine);
+  const { name } = route(engine);
   return timed({ model: name, task: opts.task, ms: opts.timeoutMs, trace: opts.trace }, async (signal) => {
     const body: Record<string, unknown> = {
-      model,
       messages: messages(opts.system, opts.parts, repair),
       response_format: {
         type: "json_schema",
@@ -75,9 +94,7 @@ async function callOnce(
       },
     };
     if (opts.effort && engine !== "sparkOpen") body.reasoning_effort = opts.effort;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await client.chat.completions.create(body as any, { signal });
-    return (res as OpenAIChat).choices[0]?.message?.content ?? "";
+    return chat(engine, body, signal);
   });
 }
 
@@ -140,15 +157,10 @@ export async function askText(opts: {
     return opts.mock();
   }
   const run = async (engine: Engine) => {
-    const { client, model, name } = route(engine);
-    return timed({ model: name, task: opts.task, ms: opts.timeoutMs, trace: opts.trace }, async (signal) => {
-      const res = await client.chat.completions.create(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        { model, messages: [{ role: "system", content: opts.system }, ...opts.history] } as any,
-        { signal },
-      );
-      return ((res as OpenAIChat).choices[0]?.message?.content ?? "").trim();
-    });
+    const { name } = route(engine);
+    return timed({ model: name, task: opts.task, ms: opts.timeoutMs, trace: opts.trace }, async (signal) =>
+      (await chat(engine, { messages: [{ role: "system", content: opts.system }, ...opts.history] }, signal)).trim(),
+    );
   };
   if (opts.engine === "sparkOpen" && hasBaseten) {
     try {

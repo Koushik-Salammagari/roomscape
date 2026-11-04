@@ -117,10 +117,22 @@ export async function maskObject(game: Game, object: RoomObject, trace?: Trace):
         bottom: jitter(object.box.bottom, frame.height),
       },
     ],
-  }).catch(() => null);
+  }).catch((error) => {
+    console.warn(`[scan] SAM could not mask the ${object.name}: ${error instanceof Error ? error.message : error}`);
+    return null;
+  });
 
+  // Spark's boxes are rough, so a detection counts if it overlaps well or its centre sits inside Spark's box.
+  const centreInside = (b: Box) => {
+    const cx = (b.left + b.right) / 2;
+    const cy = (b.top + b.bottom) / 2;
+    const pad = 0.15;
+    const w = object.box.right - object.box.left;
+    const h = object.box.bottom - object.box.top;
+    return cx >= object.box.left - w * pad && cx <= object.box.right + w * pad && cy >= object.box.top - h * pad && cy <= object.box.bottom + h * pad;
+  };
   const best = result?.objects
-    .map((o) => ({ o, score: iou(o.box, object.box) }))
+    .map((o) => ({ o, score: iou(o.box, object.box) + (centreInside(o.box) ? 0.3 : 0) }))
     .sort((a, b) => b.score - a.score)[0];
 
   if (!best || best.score < 0.15) return { ...object, reachable: false, status: "listed" };

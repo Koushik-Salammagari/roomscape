@@ -6,7 +6,7 @@ import {
 } from "@meta-sam/parser";
 import { mockModels } from "@/lib/env";
 import { MODELS } from "./ids";
-import { metaClient, sleep, timed, type Trace } from "./runtime";
+import { metaClient, retrying, sleep, timed, type Trace } from "./runtime";
 
 /** One object SAM found, in source-image pixels. */
 export type SamObject = {
@@ -86,6 +86,7 @@ export async function segmentImage(opts: {
   }
 
   return timed({ model: "sam", task: opts.task ?? `Find "${concept}"`, ms: opts.timeoutMs ?? 12_000, trace: opts.trace }, async (signal) => {
+    const result = await retrying(async () => {
     const stream = await metaClient().responses.create(
       {
         model: MODELS.sam,
@@ -104,10 +105,12 @@ export async function segmentImage(opts: {
       } as any,
       { signal },
     );
-    const result = await parseImageStream(closeTextLanes(stream as unknown as AsyncIterable<unknown>)).finalResult;
-    if (result.outcome.status !== "completed") {
-      throw new Error(`SAM did not finish: ${result.outcome.status}`);
+    const parsed = await parseImageStream(closeTextLanes(stream as unknown as AsyncIterable<unknown>)).finalResult;
+    if (parsed.outcome.status !== "completed") {
+      throw new Error(`SAM did not finish: ${parsed.outcome.status}`);
     }
+    return parsed;
+    });
 
     const byId = new Map<string, SamObject>();
     for (const box of recordsOfKind(result.records, "box")) {

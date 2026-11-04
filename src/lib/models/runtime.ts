@@ -81,3 +81,26 @@ export async function withFallback<T>(
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Errors worth retrying: Meta's intermittent "model not found", rate limits, server hiccups, dropped connections. */
+export function isRetryable(error: unknown): boolean {
+  const status = (error as { status?: number })?.status;
+  if (status === 404 || status === 408 || status === 409 || status === 429 || (status !== undefined && status >= 500)) return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /model was not found|ECONNRESET|socket hang up|fetch failed|terminated|network/i.test(message);
+}
+
+/** Retries a call up to `tries` times with a short backoff when the failure is retryable. */
+export async function retrying<T>(fn: () => Promise<T>, tries = 3): Promise<T> {
+  let last: unknown;
+  for (let attempt = 0; attempt < tries; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      last = error;
+      if (error instanceof ModelTimeoutError || !isRetryable(error) || attempt === tries - 1) throw error;
+      await sleep(700 * 2 ** attempt);
+    }
+  }
+  throw last;
+}
