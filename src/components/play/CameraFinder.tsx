@@ -10,10 +10,10 @@ import type { RoomObject } from "@/lib/game/schema";
 export type Shot = { dataUrl: string; width: number; height: number };
 export type FindResult = { correct: boolean; message?: string; outline?: Pick<RoomObject, "box" | "maskPath" | "maskBounds" | "maskSize"> };
 
-type Props = { onShot: (shot: Shot) => Promise<FindResult>; onClose: () => void; onFound: () => void };
+type Props = { onShot: (shot: Shot) => Promise<FindResult>; onClose: () => void; onFound: () => void; foundText?: string; prompt?: string };
 
 /** Full-screen camera: point at the object, tap the shutter, and SAM's outline glows on what you found. */
-export function CameraFinder({ onShot, onClose, onFound }: Props) {
+export function CameraFinder({ onShot, onClose, onFound, foundText = "That’s it. The clue is yours.", prompt }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const [live, setLive] = useState<"asking" | "on" | "blocked">("asking");
   const [shot, setShot] = useState<Shot | null>(null);
@@ -88,6 +88,9 @@ export function CameraFinder({ onShot, onClose, onFound }: Props) {
           />
         ) : null}
         <div className="pointer-events-none absolute inset-8 rounded-[32px] border-2 border-lantern/50" />
+        {prompt && !shot ? (
+          <p className="absolute inset-x-10 top-16 rounded-2xl bg-night/70 px-4 py-2 text-center text-sm backdrop-blur">{prompt}</p>
+        ) : null}
         <button
           type="button"
           onClick={onClose}
@@ -109,7 +112,7 @@ export function CameraFinder({ onShot, onClose, onFound }: Props) {
               exit={{ opacity: 0 }}
             >
               <p className={result.correct ? "font-semibold text-lantern" : ""}>
-                {result.correct ? "That’s it. The clue is yours." : result.message}
+                {result.correct ? foundText : result.message}
               </p>
             </motion.div>
           ) : null}

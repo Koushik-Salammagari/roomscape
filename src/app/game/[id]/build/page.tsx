@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { StepList, type StepState } from "@/components/game/StepList";
 import { fetchGame, postJSON, readLines } from "@/lib/client/game";
 import type { PlayerGame } from "@/lib/game/view";
+import { missionLine } from "@/lib/game/mission";
 
 type Designed = {
   title: string;
@@ -155,6 +156,16 @@ export default function BuildTheater({ params }: { params: Promise<{ id: string 
           transition={{ delay: 0.4, duration: 1 }}
         >
           {design.intro}
+        </motion.p>
+      ) : null}
+      {design && game ? (
+        <motion.p
+          className="-mt-3 rounded-2xl border border-lantern/40 bg-night-raised/60 px-4 py-3 text-[0.95rem]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 0.8 }}
+        >
+          {missionLine(game.theme, design.stations.length, game.mode === "host")}
         </motion.p>
       ) : null}
 

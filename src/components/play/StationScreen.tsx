@@ -10,6 +10,7 @@ import { CameraFinder, type FindResult, type Shot } from "./CameraFinder";
 import { RoomTapper } from "./RoomTapper";
 import { UnlockBurst } from "./UnlockBurst";
 import { TalkBar } from "./TalkBar";
+import { LiveWindow } from "./LiveWindow";
 import { postJSON } from "@/lib/client/game";
 import { cue } from "@/lib/client/player";
 import type { PlayerGame } from "@/lib/game/view";
@@ -32,6 +33,8 @@ type Props = {
   player: string;
   /** Playing someone else's room: tap the photos instead of using the camera. */
   remote?: boolean;
+  /** Where to go after this clue, said by the character when it is solved. */
+  nextLine?: string;
   onBoard: (b: Board) => void;
   onClose: () => void;
 };
@@ -44,7 +47,7 @@ const TYPE_LABEL: Record<string, string> = {
   "picture-fragment": "Torn picture",
 };
 
-export function StationScreen({ gameId, game, station, board, index, player, remote = false, onBoard, onClose }: Props) {
+export function StationScreen({ gameId, game, station, board, index, player, remote = false, nextLine = "", onBoard, onClose }: Props) {
   const [line, setLine] = useState(station.character.greeting);
   const [busy, setBusy] = useState(false);
   const [thinking, setThinking] = useState(false);
@@ -55,8 +58,48 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
   const shake = useAnimationControls();
   const foundDigit = useRef<number | undefined>(undefined);
   const [art, setArt] = useState<string | undefined>(board.art ?? station.character.art);
-  const crop = station.objectId ? game.room.objects.find((o) => o.id === station.objectId)?.crop : undefined;
+  const object = station.objectId ? game.room.objects.find((o) => o.id === station.objectId) : undefined;
+  const crop = object?.crop;
   const hiding = Boolean(station.hiding) && solvedDigit === undefined;
+
+  // Clues with a named object are met in person first: walk up to it, point the camera, and it wakes up.
+  const meetable = !station.hiding && Boolean(object);
+  const metKey = `roomscape:met:${gameId}:${station.id}`;
+  const [met, setMet] = useState<boolean>(() => {
+    if (!meetable || board.solved) return true;
+    try {
+      return localStorage.getItem(metKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [meeting, setMeeting] = useState(false);
+  const [liveCamera, setLiveCamera] = useState(false);
+  const firstLine = station.prompt.split("\n").filter(Boolean)[0] ?? "";
+  const wake = (byCamera: boolean) => {
+    try {
+      localStorage.setItem(metKey, "1");
+    } catch {
+      /* fine */
+    }
+    cue("unlock");
+    setMet(true);
+    setLiveCamera(byCamera);
+    setLine(`${station.character.greeting} ${firstLine}`);
+  };
+  const meetTap = async (t: { frame: number; x: number; y: number }) => {
+    setBusy(true);
+    try {
+      const r = await postJSON<FindResult>(`/api/games/${gameId}/play/meet`, { player, stationId: station.id, attempt: { kind: "tap", ...t } });
+      if (r.correct) wake(false);
+      else {
+        cue("wrong");
+        setLine(r.message ?? `That’s not the ${object?.name}.`);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const send = async (attempt: Attempt): Promise<AnswerReply> => {
     const reply = await postJSON<AnswerReply>(`/api/games/${gameId}/play/answer`, { player, stationId: station.id, attempt });
@@ -69,7 +112,7 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
       cue("unlock");
       if (reply.art) setArt(reply.art);
       setSolvedDigit(reply.digit);
-      setLine(station.hiding ? "You found me! Here’s your digit for the final lock." : "You solved it. Here’s your digit for the final lock.");
+      setLine(`${station.hiding ? "You found me!" : "You solved it!"} Here’s your digit for the final lock. ${nextLine}`.trim());
     } else {
       cue("wrong");
       setLine(reply.message ?? "Not quite.");
@@ -129,12 +172,60 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
         </header>
 
         <h1 className="font-display text-[2rem] leading-tight">{station.title}</h1>
-        <div className="flex flex-col gap-4">
-          <Character name={station.character.name} art={art} crop={crop} hiding={hiding} voice={station.character.voice} line={line} thinking={thinking} />
-          <TalkBar gameId={gameId} stationId={station.id} player={player} name={station.character.name} onReply={setLine} onThinking={setThinking} />
-        </div>
 
-        {solvedDigit !== undefined ? (
+        {!met && object ? (
+          <div className="flex flex-col gap-5">
+            <PaperCard tilt={-0.8}>
+              <p className="text-sm font-semibold">Your next clue is waiting at</p>
+              <div className="mt-3 flex items-center gap-4">
+                {crop ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={crop} alt="" className="size-20 shrink-0 rounded-2xl object-cover" />
+                ) : null}
+                <p className="font-display text-[1.6rem] leading-tight">the {object.name}</p>
+              </div>
+              <p className="mt-3 text-[0.95rem]">
+                {remote
+                  ? `Find it in the room photos and tap it. ${station.character.name} will wake up and talk to you.`
+                  : `Walk over to it and point your camera at it. ${station.character.name} lives there and will wake up and talk to you.`}
+              </p>
+            </PaperCard>
+            {remote ? (
+              <>
+                <RoomTapper frames={game.room.frames} busy={busy} onTap={meetTap} />
+                {line !== station.character.greeting ? <p className="text-sm text-text-soft">{line}</p> : null}
+              </>
+            ) : (
+              <>
+                <Button onClick={() => setMeeting(true)} className="min-h-14 w-full text-lg">
+                  I’m here, open the camera
+                </Button>
+                <Button variant="ghost" onClick={() => wake(false)} className="self-center">
+                  I can’t reach it, talk here
+                </Button>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {meetable && solvedDigit === undefined ? (
+              <LiveWindow camera={liveCamera} still={crop ?? game.room.frames[object!.frame]?.url} name={station.character.name} art={art} speaking={thinking} />
+            ) : null}
+            <Character
+              name={station.character.name}
+              art={art}
+              crop={crop}
+              hiding={hiding}
+              voice={station.character.voice}
+              line={line}
+              thinking={thinking}
+              size={meetable && solvedDigit === undefined ? "sm" : "lg"}
+            />
+            <TalkBar gameId={gameId} stationId={station.id} player={player} name={station.character.name} onReply={setLine} onThinking={setThinking} />
+          </div>
+        )}
+
+        {!met ? null : solvedDigit !== undefined ? (
           <div className="relative flex flex-col items-center gap-4 py-8">
             <UnlockBurst />
             <motion.div
@@ -226,6 +317,19 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
       </div>
 
       <AnimatePresence>
+        {meeting && object ? (
+          <CameraFinder
+            key="meet"
+            prompt={`Point at the ${object.name}`}
+            foundText={`${station.character.name} is waking up…`}
+            onClose={() => setMeeting(false)}
+            onShot={(shot: Shot) => postJSON<FindResult>(`/api/games/${gameId}/play/meet`, { player, stationId: station.id, attempt: { kind: "photo", ...shot } })}
+            onFound={() => {
+              setMeeting(false);
+              wake(true);
+            }}
+          />
+        ) : null}
         {camera ? (
           <CameraFinder
             onClose={() => setCamera(false)}
@@ -242,7 +346,7 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
               setCamera(false);
               cue("unlock");
               setSolvedDigit(foundDigit.current);
-              setLine("You found me! Here’s your digit for the final lock.");
+              setLine(`You found me! Here’s your digit for the final lock. ${nextLine}`.trim());
             }}
           />
         ) : null}

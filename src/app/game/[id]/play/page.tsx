@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { CodeLock } from "@/components/ui/CodeLock";
 import { PaperCard } from "@/components/ui/PaperCard";
 import { MakingOf } from "@/components/game/MakingOf";
+import { missionLine } from "@/lib/game/mission";
 import { StationScreen, type Board } from "@/components/play/StationScreen";
 import { UnlockBurst } from "@/components/play/UnlockBurst";
 import { fetchGame, postJSON } from "@/lib/client/game";
@@ -92,6 +93,18 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
     return out;
   }, [plan]);
 
+  const objectName = (objectId?: string) => (objectId ? game?.room.objects.find((o) => o.id === objectId)?.name : undefined);
+
+  /** What a character says after its clue is solved: where to go next. */
+  const nextLineFor = (stationId: string) => {
+    if (!plan || !board) return "";
+    const rest = plan.stations.filter((s, i) => s.id !== stationId && !board.stations[i].solved);
+    if (!rest.length) return "That’s every digit. The final lock is waiting on the case board!";
+    const next = rest[0];
+    const name = objectName(next.objectId);
+    return next.hiding || !name ? "Your next clue is a riddle on the case board." : `Now go and find the ${name}. ${next.character.name} is waiting for you there.`;
+  };
+
   const begin = () => {
     try {
       localStorage.setItem(`roomscape:opened:${id}`, "1");
@@ -168,7 +181,7 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
               {plan.intro}
             </motion.p>
             <motion.p className="text-text-soft" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }}>
-              {plan.stations.length} clues are hidden in this room. Each one you solve gives you a digit. Put them together to open the final lock.
+              {missionLine(game.theme, plan.stations.length, game.mode === "host")}
             </motion.p>
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.2 }}>
               <Button onClick={begin} className="min-h-14 w-full text-lg">
@@ -256,7 +269,13 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
                       </span>
                       <span className="truncate font-display text-lg">{s.title}</span>
                       <span className={clsx("text-sm", b.solved ? "text-tide" : b.open ? "text-lantern" : "text-text-soft")}>
-                        {b.solved ? `Solved: digit ${b.digit}` : b.open ? (s.hiding ? `${s.character.name} is hiding somewhere` : `${s.character.name} is waiting`) : lockedReason[s.id]}
+                        {b.solved
+                          ? `Solved: digit ${b.digit}`
+                          : b.open
+                            ? s.hiding
+                              ? `${s.character.name} is hiding somewhere. Solve the riddle to find it.`
+                              : `Go talk to the ${objectName(s.objectId) ?? s.character.name}`
+                            : lockedReason[s.id]}
                       </span>
                     </span>
                   </button>
@@ -354,6 +373,7 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
             index={plan.stations.findIndex((s) => s.id === openStation)}
             player={player}
             remote={remote}
+            nextLine={nextLineFor(openStation)}
             onBoard={setBoard}
             onClose={() => setOpenStation(null)}
           />

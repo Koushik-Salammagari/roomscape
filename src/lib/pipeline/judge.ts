@@ -72,6 +72,15 @@ export async function judge(game: Game, station: Station, attempt: Attempt, trac
 
   // Hunts: riddle-hunt and picture-fragment.
   if (!target) return { correct: false, message: "This clue has lost its object. Use a hint to continue." };
+  return findObject(game, target, attempt, trace);
+}
+
+/**
+ * Is this tap or photo on the target object? Used to solve hunts, and to meet a
+ * clue's character in person before it talks. SAM 3.1 finds it, Spark confirms it.
+ */
+export async function findObject(game: Game, target: RoomObject, attempt: Attempt, trace?: Trace): Promise<Verdict> {
+  if (attempt.kind === "text") return { correct: false, message: "Point the camera at the object, or tap it in the room photos." };
 
   if (attempt.kind === "tap") {
     const pad = 0.08;
