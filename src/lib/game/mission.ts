@@ -3,6 +3,8 @@ import type { Game } from "./schema";
 /** The one-line goal shown before play, in each story's own terms. */
 export function missionLine(theme: Game["theme"], count: number, hosted: boolean): string {
   const prize = hosted ? "your gift" : "the treasure";
+  if (theme === "mystery")
+    return `Lord Ashby was found poisoned at dinner, and ${count} witnesses are hiding in this room’s things. Find each one, get it talking, and it gives you a digit of the locked study${hosted ? ", where your gift waits" : ", where the truth is kept"}.`;
   if (theme === "heist")
     return `${count} suspects are hiding in this room’s furniture. Each one knows a digit of the vault code. Find them, get them talking, and crack the vault${hosted ? " to find your gift" : ""}.`;
   if (theme === "haunted")

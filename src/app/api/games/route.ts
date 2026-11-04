@@ -6,7 +6,7 @@ import type { Game } from "@/lib/game/schema";
 
 const CreateGame = z.object({
   mode: z.enum(["host", "quick"]),
-  theme: z.enum(["lost-treasure", "heist", "haunted"]),
+  theme: z.enum(["lost-treasure", "mystery", "heist", "haunted"]),
   difficulty: z.enum(["easy", "normal", "hard"]),
 });
 

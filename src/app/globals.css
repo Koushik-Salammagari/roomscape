@@ -25,6 +25,23 @@
   color-scheme: dark;
 }
 
+[data-theme="mystery"] {
+  --night: #14181a;
+  --night-raised: #1e2427;
+  --night-deep: #0d1012;
+  --ink-line: #344046;
+  --lantern: #d9a441;
+  --lantern-glow: #ffd27f;
+  --tide: #b0485a;
+  --paper: #e9e1cf;
+  --paper-ink: #1d1a15;
+  --text: #f1ece3;
+  --text-soft: #a9b2b0;
+  --danger: #e0607a;
+  --wash: radial-gradient(120% 70% at 20% 0%, #2c2232 0%, transparent 60%),
+    radial-gradient(90% 60% at 100% 100%, #1f2f2c 0%, transparent 55%);
+}
+
 [data-theme="heist"] {
   --night: #1b1620;
   --night-raised: #26202d;

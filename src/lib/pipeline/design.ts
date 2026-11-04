@@ -46,6 +46,8 @@ const OPEN_TYPES: StationType[] = ["riddle-hunt", "observation-code", "picture-f
 const THEME_BRIEF: Record<Game["theme"], string> = {
   "lost-treasure":
     "Lost treasure: a sea captain hid her fortune in this room long ago. Maps, lanterns, salt air and old ship's logs. Adventurous and warm.",
+  mystery:
+    "A cosy murder mystery in the style of a 1920s country-house whodunit. Lord Ashby was poisoned at dinner (off-stage, never described). The objects in this room are witnesses and suspects: gossipy, theatrical, each hiding a secret. The final lock opens the locked study where the culprit's confession, or the treasure, is kept. Witty and Agatha Christie in tone: no gore, no weapons described, nothing frightening.",
   heist:
     "The heist: something precious vanished from this room at midnight. Velvet ropes, moonlight, sharp-witted suspects. Clever and playful, never violent.",
   haunted:
@@ -359,14 +361,14 @@ function templateStation(type: StationType, game: Game, used: Set<string>, title
       title,
       character: character(o.name),
       prompt: "Someone scratched a coded word where only you would look.",
-      answer: game.theme === "haunted" ? "LANTERN" : game.theme === "heist" ? "VELVET" : "ANCHOR",
+      answer: game.theme === "haunted" ? "LANTERN" : game.theme === "heist" ? "VELVET" : game.theme === "mystery" ? "POISON" : "ANCHOR",
       keyObjectId: key.objectId,
       keyFactAbout: key.about,
       hints: ["Each letter has moved forward the same number of places.", `The number comes from the ${keyName}.`, "Shift each letter back and read the word."],
     };
   }
   // logic: a fixed puzzle with exactly one solution (exactly one of three statements is false).
-  const names = game.theme === "heist" ? ["Vera", "Otto", "June"] : game.theme === "haunted" ? ["Agnes", "Silas", "Wren"] : ["Marlow", "Isla", "Finn"];
+  const names = game.theme === "mystery" ? ["Lady Mabel", "The Butler", "Colonel Finch"] : game.theme === "heist" ? ["Vera", "Otto", "June"] : game.theme === "haunted" ? ["Agnes", "Silas", "Wren"] : ["Marlow", "Isla", "Finn"];
   const o = pool[0];
   if (!o) return null;
   const [a, b, c] = names;

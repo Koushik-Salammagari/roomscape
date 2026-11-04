@@ -85,13 +85,13 @@ export default function Home() {
 
       <fieldset className="flex min-w-0 flex-col gap-3">
         <legend className="mb-3 text-base font-semibold">Choose a story</legend>
-        <div className="-mx-5 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
+        <div className="grid grid-cols-2 gap-3">
           {THEMES.map((t) => (
             <label
               key={t.id}
               data-theme={t.id}
               className={clsx(
-                "relative flex w-[15.5rem] shrink-0 snap-start cursor-pointer flex-col gap-2 rounded-3xl border p-4",
+                "relative flex min-w-0 cursor-pointer flex-col gap-2 rounded-3xl border p-4",
                 "bg-night text-text transition-[border-color,transform]",
                 theme === t.id ? "border-lantern" : "border-ink-line",
               )}

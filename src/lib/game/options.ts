@@ -1,7 +1,7 @@
+/** Stories offered on the home page. Older games may still use "heist" or "haunted". */
 export const THEMES = [
-  { id: "lost-treasure", name: "Lost treasure", line: "A sea captain hid her gold somewhere in this room." },
-  { id: "heist", name: "The heist", line: "Something precious vanished at midnight. Find it before dawn." },
-  { id: "haunted", name: "Haunted house", line: "Something in this room is restless. Find out what it wants." },
+  { id: "lost-treasure", name: "Treasure hunt", line: "A sea captain hid her gold somewhere in this room." },
+  { id: "mystery", name: "Murder mystery", line: "Lord Ashby is dead. The furniture saw who did it." },
 ] as const;
 
 export const DIFFICULTIES = [

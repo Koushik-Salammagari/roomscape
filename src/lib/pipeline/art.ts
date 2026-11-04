@@ -4,6 +4,7 @@ import { modelReadableImage, storeImage } from "@/lib/store";
 
 const WORLD: Record<Game["theme"], string> = {
   "lost-treasure": "a sea captain's hidden treasure: brass lanterns, rolled maps, rope, old wood and gold glints",
+  mystery: "a cosy 1920s country-house murder mystery: candlelight, rain on the windows, a magnifying glass, velvet and polished mahogany, no bodies and no blood",
   heist: "a moonlit midnight heist: velvet ropes, spotlights, long shadows, polished brass",
   haunted: "a gently haunted house: soft moonlight, drifting mist, friendly glowing wisps",
 };
