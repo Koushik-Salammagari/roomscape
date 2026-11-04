@@ -380,7 +380,7 @@ function ScanScreen() {
           <div className="sticky bottom-0 -mx-5 bg-gradient-to-t from-night via-night/95 to-transparent px-5 pt-6 pb-2">
             <Button
               className="min-h-14 w-full text-lg"
-              onClick={() => router.push(`/game/${gameId.current}/build`)}
+              onClick={() => router.push(`/game/${gameId.current}/${mode === "host" ? "setup" : "build"}`)}
             >
               {mode === "host" ? "Choose where the gift is hidden" : "Build my game"}
             </Button>

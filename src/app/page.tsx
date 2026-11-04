@@ -157,6 +157,11 @@ export default function Home() {
         <Button onClick={start} className="min-h-14 w-full text-lg">
           {mode === "host" ? "Scan the room to hide your gift" : "Scan my room"}
         </Button>
+        {process.env.NEXT_PUBLIC_HAS_DEMO === "1" ? (
+          <a href="/demo" className="text-center text-sm text-text-soft underline decoration-ink-line underline-offset-4">
+            No room handy? Play the demo room
+          </a>
+        ) : null}
         <p className="text-center text-xs text-text-soft">For players 18 and over.</p>
       </div>
     </main>

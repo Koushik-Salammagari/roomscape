@@ -319,6 +319,11 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
                 <span className="text-xs text-text-soft">Rating</span>
               </div>
             </motion.div>
+            {!ending.hosted ? (
+              <Button variant="quiet" onClick={() => shareRoom(id, plan.title)}>
+                Send this room to a friend
+              </Button>
+            ) : null}
             <Link href="/" className="text-center text-text-soft underline decoration-ink-line underline-offset-4">
               Make a hunt for another room
             </Link>
@@ -343,6 +348,16 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
       </AnimatePresence>
     </>
   );
+}
+
+async function shareRoom(id: string, title: string) {
+  const url = `${window.location.origin}/game/${id}/play`;
+  try {
+    if (navigator.share) await navigator.share({ title, text: "I solved the mystery in my room. Can you?", url });
+    else await navigator.clipboard.writeText(url);
+  } catch {
+    /* share sheet closed */
+  }
 }
 
 function Stat({ label, value }: { label: string; value: string }) {

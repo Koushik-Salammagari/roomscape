@@ -221,8 +221,11 @@ export default function BuildTheater({ params }: { params: Promise<{ id: string 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <Button className="min-h-14 w-full text-lg" onClick={() => router.push(`/game/${id}/play`)}>
-              Open the case
+            <Button
+              className="min-h-14 w-full text-lg"
+              onClick={() => router.push(`/game/${id}/${game?.mode === "host" ? "preview" : "play"}`)}
+            >
+              {game?.mode === "host" ? "Preview the hunt" : "Open the case"}
             </Button>
           </motion.div>
         ) : null}

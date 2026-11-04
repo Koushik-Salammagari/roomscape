@@ -16,10 +16,10 @@ export async function fetchGame<T>(id: string, opts: { asPlayer?: boolean } = {}
   return data as T;
 }
 
-export async function postJSON<T>(url: string, body?: unknown): Promise<T> {
+export async function postJSON<T>(url: string, body?: unknown, hostKey?: string | null): Promise<T> {
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(hostKey ? { "x-host-key": hostKey } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));

@@ -508,3 +508,36 @@ export async function designGame(game: Game, trace?: Trace): Promise<DesignResul
     notes,
   };
 }
+
+/**
+ * Host preview: replaces one clue with a tested backup of the same kind that
+ * uses a different object. No model call, so it is instant and free.
+ */
+export function swapStation(game: Game, stationId: string): Station {
+  const plan = game.plan!;
+  const index = plan.stations.findIndex((s) => s.id === stationId);
+  if (index === -1) throw new Error("No such clue.");
+  const old = plan.stations[index];
+  const used = new Set(plan.stations.map((s) => s.objectId));
+  const d = templateStation(old.type, game, used, old.title);
+  if (!d) throw new Error("There is no other object in this room that fits this kind of clue.");
+  let prompt = d.prompt;
+  if (d.type === "cipher") {
+    const key = cipherShift(d, game)!;
+    prompt = `${d.prompt}\n\nThe coded word: ${caesar(d.answer, key.shift)}\nShift every letter back by ${key.rule}.`;
+  }
+  const next: Station = {
+    ...old,
+    objectId: d.objectId,
+    character: { ...d.character, art: undefined },
+    prompt,
+    answer: d.type === "cipher" ? d.answer.toUpperCase() : d.answer,
+    statements: d.statements,
+    options: d.options,
+    hints: [d.hints[0], d.hints[1], d.hints[2]],
+    image: undefined,
+    check: "template",
+  };
+  plan.stations[index] = next;
+  return next;
+}
