@@ -207,28 +207,20 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
             </div>
           </header>
 
-          <section aria-label="Digits for the final lock" className="flex flex-col gap-2">
-            <div className="flex justify-between gap-2">
-              {board.stations.map((s, i) => (
-                <motion.div
-                  key={s.id}
-                  layout
-                  className={clsx(
-                    "grid h-14 flex-1 place-items-center rounded-2xl border-2 font-mono text-2xl font-bold",
-                    s.solved ? "border-lantern bg-night-raised text-lantern" : "border-dashed border-ink-line text-text-soft",
-                  )}
-                  aria-label={s.solved ? `Digit ${i + 1}: ${s.digit}` : `Digit ${i + 1}: not found yet`}
-                >
-                  {s.solved ? (
-                    <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 16 }}>
-                      {s.digit}
-                    </motion.span>
-                  ) : (
-                    i + 1
-                  )}
-                </motion.div>
-              ))}
-            </div>
+          <section aria-label="Clues solved" className="flex items-center gap-2">
+            {board.stations.map((s, i) => (
+              <motion.span
+                key={s.id}
+                layout
+                className={clsx(
+                  "grid h-10 flex-1 place-items-center rounded-xl border text-sm font-semibold",
+                  s.solved ? "border-tide bg-night-raised text-tide" : "border-ink-line text-text-soft",
+                )}
+                aria-label={`Clue ${i + 1}: ${s.solved ? "solved" : "not solved yet"}`}
+              >
+                {s.solved ? "✓" : i + 1}
+              </motion.span>
+            ))}
           </section>
 
           <ol className="flex flex-col gap-3">
@@ -270,7 +262,7 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
                       <span className="truncate font-display text-lg">{s.title}</span>
                       <span className={clsx("text-sm", b.solved ? "text-tide" : b.open ? "text-lantern" : "text-text-soft")}>
                         {b.solved
-                          ? `Solved: digit ${b.digit}`
+                          ? "Solved ✓"
                           : b.open
                             ? s.hiding
                               ? `${s.character.name} is hiding somewhere. Solve the riddle to find it.`
@@ -298,15 +290,22 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
                 </div>
               ) : (
                 <>
-                  <p className="text-text-soft">You have every digit. Enter them in order, clue 1 first.</p>
-                  <Button onClick={() => setPhase("lock")} className="min-h-14 w-full text-lg">
+                  <p className="text-text-soft">You solved every clue. Each one gave you part of the code, and it’s ready.</p>
+                  <Button
+                    onClick={() => {
+                      // The code is the clues' digits in order; fill it in so the player only has to open it.
+                      setCode(board.stations.map((x) => x.digit ?? 0));
+                      setPhase("lock");
+                    }}
+                    className="min-h-14 w-full text-lg"
+                  >
                     Try the final lock
                   </Button>
                 </>
               )
             ) : (
               <p className="text-text-soft">
-                Solve every clue to collect all {plan.stations.length} digits. {board.stations.filter((s) => s.solved).length} found so far.
+                Solve all {plan.stations.length} clues to open it. {board.stations.filter((s) => s.solved).length} solved so far.
               </p>
             )}
           </section>

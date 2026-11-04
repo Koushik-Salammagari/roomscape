@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { LensFace } from "./LensFace";
+import type { VoiceStyle } from "@/lib/client/voice";
 
 type Box = { left: number; top: number; right: number; bottom: number };
 type Track = { found: boolean; box?: Box; maskPath?: string; maskBounds?: Box; maskSize?: { width: number; height: number } };
@@ -17,6 +19,8 @@ type Props = {
   onAwake: () => void;
   awake: boolean;
   speaking: boolean;
+  /** The character's personality picks its face. */
+  voice?: VoiceStyle;
 };
 
 /** Soft things sway like leaves; hard things bob and breathe. */
@@ -55,7 +59,7 @@ void main(){
  * finds it about once a second; inside its outline the real pixels sway or bob,
  * harder while it talks, and a face follows it. Look away and it falls still.
  */
-export function TalkingLens({ gameId, stationId, objectName, onVerify, onAwake, awake, speaking }: Props) {
+export function TalkingLens({ gameId, stationId, objectName, onVerify, onAwake, awake, speaking, voice = "warm" }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const maskCanvas = useRef<HTMLCanvasElement | null>(null);
@@ -279,7 +283,6 @@ export function TalkingLens({ gameId, stationId, objectName, onVerify, onAwake, 
   }, [camera, gameId, stationId, objectName, applyTrack, onVerify, onAwake]);
 
   const showFace = awake && inView && face;
-  const eye = face ? Math.max(14, Math.min(46, face.w * 0.13)) : 20;
 
   return (
     <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl border border-ink-line bg-night-deep">
@@ -297,27 +300,7 @@ export function TalkingLens({ gameId, stationId, objectName, onVerify, onAwake, 
             transition={{ type: "spring", stiffness: 120, damping: 18 }}
             style={{ x: "-50%", y: "-50%" }}
           >
-            <div className="flex flex-col items-center" style={{ gap: eye * 0.35 }}>
-              <div className="flex" style={{ gap: eye * 0.7 }}>
-                {[0, 1].map((i) => (
-                  <motion.div
-                    key={i}
-                    className="relative rounded-full border-2 border-[#1b1a17] bg-white shadow-md"
-                    style={{ width: eye, height: eye * 1.1 }}
-                    animate={{ scaleY: [1, 1, 0.1, 1] }}
-                    transition={{ duration: 3.6, repeat: Infinity, times: [0, 0.9, 0.95, 1] }}
-                  >
-                    <span className="absolute rounded-full bg-[#1b1a17]" style={{ width: eye * 0.45, height: eye * 0.45, left: eye * 0.3, top: eye * 0.35 }} />
-                  </motion.div>
-                ))}
-              </div>
-              <motion.div
-                className="rounded-full border-2 border-[#1b1a17] bg-[#3a1414]"
-                style={{ width: eye * 0.9 }}
-                animate={speaking ? { height: [eye * 0.15, eye * 0.6, eye * 0.25, eye * 0.7, eye * 0.15] } : { height: eye * 0.18 }}
-                transition={speaking ? { duration: 0.55, repeat: Infinity } : { duration: 0.2 }}
-              />
-            </div>
+            <LensFace style={voice} speaking={speaking} width={Math.max(96, Math.min(230, face.w * 0.6))} />
           </motion.div>
         ) : null}
       </AnimatePresence>

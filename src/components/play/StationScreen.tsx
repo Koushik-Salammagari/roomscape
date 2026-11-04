@@ -122,7 +122,7 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
       cue("unlock");
       if (reply.art) setArt(reply.art);
       setSolvedDigit(reply.digit);
-      setLine(`${station.hiding ? "You found me!" : "You solved it!"} Here’s your digit for the final lock. ${nextLine}`.trim());
+      setLine(`${station.hiding ? "You found me!" : "You solved it!"} Clue solved! ${nextLine}`.trim());
     } else {
       cue("wrong");
       setLine(reply.message ?? "Not quite.");
@@ -193,6 +193,7 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
               onAwake={wakeByCamera}
               awake={met}
               speaking={speaking}
+              voice={station.character.voice}
             />
             {met ? (
               <>
@@ -270,16 +271,16 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
           <div className="relative flex flex-col items-center gap-4 py-8">
             <UnlockBurst />
             <motion.div
-              className="grid size-28 place-items-center rounded-3xl border-2 border-lantern bg-night-raised font-mono text-6xl font-bold text-lantern"
+              className="grid size-28 place-items-center rounded-full border-2 border-tide bg-night-raised text-6xl text-tide"
               initial={{ scale: 0.3, rotate: -20 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 340, damping: 14 }}
+              aria-hidden
             >
-              {solvedDigit}
+              ✓
             </motion.div>
-            <p className="text-center text-text-soft">
-              Digit {index + 1} of the final lock. It’s saved on your case board.
-            </p>
+            <p className="text-center font-display text-2xl">Clue {index + 1} solved</p>
+            {nextLine ? <p className="text-center text-text-soft">{nextLine}</p> : null}
             <Button onClick={onClose} className="min-h-14 w-full text-lg">
               Back to the case board
             </Button>
@@ -387,7 +388,7 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
               setCamera(false);
               cue("unlock");
               setSolvedDigit(foundDigit.current);
-              setLine(`You found me! Here’s your digit for the final lock. ${nextLine}`.trim());
+              setLine(`You found me! Clue solved! ${nextLine}`.trim());
             }}
           />
         ) : null}

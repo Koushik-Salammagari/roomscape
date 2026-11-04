@@ -102,22 +102,31 @@ export function speak(text: string, style: VoiceStyle, name: string, handlers: S
   }
 
   synth.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.pitch = pitch;
-  u.rate = rate;
+  // Speak phrase by phrase: the short gap between utterances reads as a natural pause at commas and full stops.
+  const phrases = text.match(/[^,.;:!?—]+[,.;:!?—]*\s*/g) ?? [text];
   const v = voiceFor(name);
-  if (v) u.voice = v;
   let sawBoundary = false;
-  u.onboundary = (e) => {
-    if (e.name && e.name !== "word") return;
-    sawBoundary = true;
-    clearInterval(timer);
-    const spoken = text.slice(0, e.charIndex).split(/\s+/).filter(Boolean).length + 1;
-    handlers.onWord?.(spoken);
-  };
-  u.onend = finish;
-  u.onerror = finish;
-  synth.speak(u);
+  let offset = 0;
+  phrases.forEach((phrase, k) => {
+    const start = offset;
+    offset += phrase.length;
+    const u = new SpeechSynthesisUtterance(phrase.trim());
+    u.pitch = pitch;
+    u.rate = rate * 0.96;
+    if (v) u.voice = v;
+    u.onboundary = (e) => {
+      if (e.name && e.name !== "word") return;
+      sawBoundary = true;
+      clearInterval(timer);
+      const spoken = text.slice(0, start + e.charIndex).split(/\s+/).filter(Boolean).length + 1;
+      handlers.onWord?.(spoken);
+    };
+    if (k === phrases.length - 1) {
+      u.onend = finish;
+      u.onerror = finish;
+    }
+    synth.speak(u);
+  });
   // If no word events arrive within half a second, pace the caption ourselves.
   setTimeout(() => {
     if (!sawBoundary && !done) startPacer();
