@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
 import clsx from "clsx";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +11,7 @@ import { RoomTapper } from "./RoomTapper";
 import { UnlockBurst } from "./UnlockBurst";
 import { TalkBar } from "./TalkBar";
 import { LiveWindow } from "./LiveWindow";
+import { TalkingLens } from "./TalkingLens";
 import { postJSON } from "@/lib/client/game";
 import { cue } from "@/lib/client/player";
 import type { PlayerGame } from "@/lib/game/view";
@@ -75,6 +76,13 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
   });
   const [meeting, setMeeting] = useState(false);
   const [liveCamera, setLiveCamera] = useState(false);
+  // The talking lens: the real object, alive in the live camera.
+  const [lens, setLens] = useState(() => meetable && met && !remote && !board.solved);
+  const [speaking, setSpeaking] = useState(false);
+  const verifyShot = useCallback(
+    (shot: Shot) => postJSON<FindResult>(`/api/games/${gameId}/play/meet`, { player, stationId: station.id, attempt: { kind: "photo", ...shot } }),
+    [gameId, player, station.id],
+  );
   const firstLine = station.prompt.split("\n").filter(Boolean)[0] ?? "";
   const wake = (byCamera: boolean) => {
     try {
@@ -85,8 +93,10 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
     cue("unlock");
     setMet(true);
     setLiveCamera(byCamera);
+    if (!byCamera) setLens(false);
     setLine(`${station.character.greeting} ${firstLine}`);
   };
+  const wakeByCamera = useCallback(() => wake(true), []); // eslint-disable-line react-hooks/exhaustive-deps
   const meetTap = async (t: { frame: number; x: number; y: number }) => {
     setBusy(true);
     try {
@@ -173,7 +183,38 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
 
         <h1 className="font-display text-[2rem] leading-tight">{station.title}</h1>
 
-        {!met && object ? (
+        {lens && object ? (
+          <div className="flex flex-col gap-4">
+            <TalkingLens
+              gameId={gameId}
+              stationId={station.id}
+              objectName={object.name}
+              onVerify={verifyShot}
+              onAwake={wakeByCamera}
+              awake={met}
+              speaking={speaking}
+            />
+            {met ? (
+              <>
+                <Character
+                  name={station.character.name}
+                  art={art}
+                  crop={crop}
+                  voice={station.character.voice}
+                  line={line}
+                  thinking={thinking}
+                  size="sm"
+                  onSpeaking={setSpeaking}
+                />
+                <TalkBar gameId={gameId} stationId={station.id} player={player} name={station.character.name} onReply={setLine} onThinking={setThinking} />
+              </>
+            ) : (
+              <Button variant="ghost" onClick={() => wake(false)} className="self-center">
+                I can’t reach it, talk here
+              </Button>
+            )}
+          </div>
+        ) : !met && object ? (
           <div className="flex flex-col gap-5">
             <PaperCard tilt={-0.8}>
               <p className="text-sm font-semibold">Your next clue is waiting at</p>
@@ -197,7 +238,7 @@ export function StationScreen({ gameId, game, station, board, index, player, rem
               </>
             ) : (
               <>
-                <Button onClick={() => setMeeting(true)} className="min-h-14 w-full text-lg">
+                <Button onClick={() => setLens(true)} className="min-h-14 w-full text-lg">
                   I’m here, open the camera
                 </Button>
                 <Button variant="ghost" onClick={() => wake(false)} className="self-center">

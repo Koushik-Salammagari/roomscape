@@ -19,13 +19,15 @@ type Props = {
   talk?: boolean;
   /** Shows a thinking bubble while a reply is on its way. */
   thinking?: boolean;
+  /** Told when the voice starts and stops, so the real object can move in time. */
+  onSpeaking?: (speaking: boolean) => void;
 };
 
 /**
  * A talking clue object. It breathes while idle, blinks, bounces on every
  * word it says, and its speech bubble types out in time with its voice.
  */
-export function Character({ name, art, crop, hiding = false, line, voice = "warm", size = "lg", talk = true, thinking = false }: Props) {
+export function Character({ name, art, crop, hiding = false, line, voice = "warm", size = "lg", talk = true, thinking = false, onSpeaking }: Props) {
   const [shown, setShown] = useState(0);
   const [speaking, setSpeaking] = useState(false);
   const [muted, setMute] = useState(false);
@@ -34,6 +36,7 @@ export function Character({ name, art, crop, hiding = false, line, voice = "warm
   const stop = useRef<() => void>(() => {});
 
   useEffect(() => setMute(isMuted()), []);
+  useEffect(() => onSpeaking?.(speaking), [speaking, onSpeaking]);
 
   useEffect(() => {
     if (!line) return;
