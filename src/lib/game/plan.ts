@@ -73,4 +73,20 @@ export const HostSchema = z.object({
 });
 export type Host = z.infer<typeof HostSchema>;
 
+const TYPE_TITLE: Record<StationType, string> = {
+  "riddle-hunt": "A riddle from the shadows",
+  "observation-code": "Look closer",
+  "picture-fragment": "The torn picture",
+  cipher: "The coded word",
+  logic: "Who is lying?",
+};
+
+/** Designers sometimes echo the puzzle type as the title; give it a proper one. */
+export function stationTitle(s: Pick<Station, "type" | "title">): string {
+  const t = s.title.trim();
+  const plain = t.toLowerCase().replace(/[^a-z]/g, "");
+  if (!t || StationType.options.some((o) => o.replace(/[^a-z]/g, "") === plain)) return TYPE_TITLE[s.type];
+  return t;
+}
+
 export const STATION_COUNT = { easy: 4, normal: 5, hard: 6 } as const;

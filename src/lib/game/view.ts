@@ -1,5 +1,6 @@
 import type { Game } from "./schema";
 import { makingOf } from "./making";
+import { stationTitle } from "./plan";
 
 /**
  * What a player's phone may see. Answers, hints, the final code, the
@@ -34,7 +35,7 @@ export function playerView(game: Game) {
           stations: plan.stations.map((s) => ({
             id: s.id,
             type: s.type,
-            title: s.title,
+            title: stationTitle(s),
             // A hiding character's portrait would give the answer away; it is revealed when found.
             character: s.type === "riddle-hunt" || s.type === "picture-fragment" ? { ...s.character, art: undefined } : s.character,
             hiding: s.type === "riddle-hunt" || s.type === "picture-fragment",
@@ -58,5 +59,6 @@ export type PlayerGame = ReturnType<typeof playerView>;
 export function hostView(game: Game) {
   const { hostKey: _key, ...rest } = game;
   void _key;
-  return { ...rest, makingOf: makingOf(game) };
+  const plan = rest.plan ? { ...rest.plan, stations: rest.plan.stations.map((s) => ({ ...s, title: stationTitle(s) })) } : rest.plan;
+  return { ...rest, plan, makingOf: makingOf(game) };
 }

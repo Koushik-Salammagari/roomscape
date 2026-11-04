@@ -1,3 +1,4 @@
+import { stationTitle } from "@/lib/game/plan";
 import { z } from "zod";
 import { askJSON, text, type Trace } from "@/lib/models";
 import { toNumber } from "@/lib/game/facts";
@@ -123,7 +124,7 @@ ${brief.touches.player ? `The player's name is ${brief.touches.player}; use it i
 ${brief.touches.occasion ? `The occasion is: ${brief.touches.occasion}. Let it shape the story and the epilogue.` : ""}
 ${brief.touches.jokes ? `Inside jokes the host wants included, lightly: ${brief.touches.jokes}.` : ""}
 
-"title" is a story title of 2 to 5 words. "intro" is 2 or 3 sentences that set the scene in this room. "epilogue" is 2 sentences for when the final lock opens.
+Each station's "title" is its own evocative name of 2 to 5 words (for example "The Butler's Ledger"), never the puzzle type. The game's "title" is a story title of 2 to 5 words. "intro" is 2 or 3 sentences that set the scene in this room. "epilogue" is 2 sentences for when the final lock opens.
 No red herrings. Nothing that needs knowledge from outside the room.`;
 }
 
@@ -541,7 +542,7 @@ export async function designGame(game: Game, trace?: Trace): Promise<DesignResul
       id: ids[i],
       type: d.type,
       objectId: d.objectId,
-      title: d.title,
+      title: stationTitle(d),
       character: d.character,
       prompt,
       answer: d.type === "cipher" ? d.answer.trim().toUpperCase() : d.answer.trim(),

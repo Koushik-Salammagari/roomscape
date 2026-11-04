@@ -4,7 +4,7 @@ import { modelReadableImage, storeImage } from "@/lib/store";
 
 const WORLD: Record<Game["theme"], string> = {
   "lost-treasure": "a sea captain's hidden treasure: brass lanterns, rolled maps, rope, old wood and gold glints",
-  mystery: "a cosy 1920s country-house murder mystery: candlelight, rain on the windows, a magnifying glass, velvet and polished mahogany, no bodies and no blood",
+  mystery: "a cosy 1920s country-house whodunit dinner party: candlelight, rain on the tall windows, a magnifying glass, a silver tea set, velvet and polished mahogany",
   heist: "a moonlit midnight heist: velvet ropes, spotlights, long shadows, polished brass",
   haunted: "a gently haunted house: soft moonlight, drifting mist, friendly glowing wisps",
 };
@@ -43,13 +43,16 @@ export async function paintGame(game: Game, onEvent: (e: ArtEvent) => void, trac
   jobs.push(
     (async () => {
       const frame = await modelReadableImage(game.room.frames[sceneFrame].url);
-      const img = await generateImage({
-        task: "Paint the room into the story",
-        prompt: `Repaint this exact room as an illustration from a storybook about ${WORLD[game.theme]}. Keep every piece of furniture and every object in the same place, size and shape, so the players recognise their own room. Change only the style, the light and the atmosphere. No people.`,
-        references: [frame],
-        timeoutMs: 90_000,
-        trace,
-      });
+      const paint = (world: string) =>
+        generateImage({
+          task: "Paint the room into the story",
+          prompt: `Repaint this exact room as an illustration from a storybook about ${world}. Keep every piece of furniture and every object in the same place, size and shape, so the players recognise their own room. Change only the style, the light and the atmosphere. No people.`,
+          references: [frame],
+          timeoutMs: 90_000,
+          trace,
+        });
+      // If a story's words trip the image filter, fall back to a plain cosy evening scene.
+      const img = await paint(WORLD[game.theme]).catch(() => paint("a cosy evening adventure: warm lamplight, deep blue shadows and a sense of mystery"));
       plan.scene = await save(game, "scene", img.dataUrl);
       onEvent({ kind: "scene", url: plan.scene });
     })().catch((e) => onEvent({ kind: "skipped", what: "scene", reason: String(e) })),
