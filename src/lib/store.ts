@@ -1,5 +1,5 @@
 import { Redis } from "@upstash/redis";
-import { put } from "@vercel/blob";
+import { get, put } from "@vercel/blob";
 import { nanoid } from "nanoid";
 import { env } from "@/lib/env";
 import { GameSchema, type Game } from "@/lib/game/schema";
@@ -50,26 +50,39 @@ export function newId(prefix: string): string {
   return `${prefix}_${nanoid(10)}`;
 }
 
-/** Stores an image and returns a URL the phone and the models can both read. */
+/**
+ * Stores an image and returns an app URL for it. In production the image goes
+ * to a private Blob store and is served through /api/media, so room photos are
+ * never publicly listed. Locally it is kept in memory.
+ */
 export async function storeImage(path: string, data: Buffer, mime: string): Promise<string> {
   if (env.blobToken) {
-    const blob = await put(path, data, { access: "public", contentType: mime, addRandomSuffix: true });
-    return blob.url;
+    const blob = await put(path, data, { access: "private", contentType: mime, addRandomSuffix: true });
+    return `/api/media/${blob.pathname}`;
   }
   const id = nanoid(12);
   memory.__media!.set(id, { mime, data });
   return `/api/media/${id}`;
 }
 
-export function readMemoryImage(id: string) {
-  return memory.__media!.get(id) ?? null;
+/** Reads a stored image back: from memory locally, from the private Blob store in production. */
+export async function readImage(key: string): Promise<{ mime: string; data: Buffer } | null> {
+  const local = memory.__media!.get(key);
+  if (local) return local;
+  if (!env.blobToken) return null;
+  const result = await get(key, { access: "private" });
+  if (!result || result.statusCode !== 200) return null;
+  const data = Buffer.from(await new Response(result.stream).arrayBuffer());
+  return { mime: result.blob.contentType ?? "image/jpeg", data };
 }
 
-/** Turns a stored image URL into something a model can read: https stays, local becomes a data URL. */
+const MEDIA_PREFIX = "/api/media/";
+
+/** Turns a stored image URL into something a model can read: a data URL. */
 export async function modelReadableImage(url: string): Promise<string> {
-  if (url.startsWith("https://") || url.startsWith("data:")) return url;
-  const id = url.split("/").pop()!;
-  const media = readMemoryImage(id);
+  if (url.startsWith("data:") || url.startsWith("https://")) return url;
+  const key = url.startsWith(MEDIA_PREFIX) ? url.slice(MEDIA_PREFIX.length) : url;
+  const media = await readImage(key);
   if (!media) throw new Error(`Image ${url} is missing`);
   return `data:${media.mime};base64,${media.data.toString("base64")}`;
 }
