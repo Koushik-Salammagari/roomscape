@@ -4,7 +4,8 @@ import type { Box } from "@/lib/game/schema";
 
 export type LocalFrame = { blob: Blob; dataUrl: string; width: number; height: number };
 
-const LONG_SIDE = 1280;
+/** Frames are sent to the models; 1024 px keeps details readable without heavy requests. */
+const LONG_SIDE = 1024;
 
 function canvasFor(width: number, height: number, longSide = LONG_SIDE) {
   const scale = Math.min(1, longSide / Math.max(width, height));

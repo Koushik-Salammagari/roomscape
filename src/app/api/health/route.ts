@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export function GET() {
   return NextResponse.json({
     ok: true,
+    version: (process.env.VERCEL_GIT_COMMIT_SHA ?? "local").slice(0, 7),
     mockModels,
     storage: {
       games: env.redisUrl && env.redisToken ? "Upstash Redis" : "memory (not saved between requests)",

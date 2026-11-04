@@ -63,14 +63,14 @@ function route(engine: Engine, backup = false): { client: ReturnType<typeof meta
 }
 
 /** Sends one chat request with retries; Spark falls back to 1.2 if 1.3 stays unavailable. */
-async function chat(engine: Engine, body: Record<string, unknown>, signal: AbortSignal): Promise<string> {
+async function chat(engine: Engine, body: Record<string, unknown>, signal: AbortSignal, trace?: Trace, task = ""): Promise<string> {
   const send = (backup: boolean) =>
     retrying(async () => {
       const { client, model } = route(engine, backup);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const res = await client.chat.completions.create({ ...body, model } as any, { signal });
       return (res as OpenAIChat).choices[0]?.message?.content ?? "";
-    });
+    }, 3, (error) => trace?.({ model: route(engine, backup).name, task: `${task} (retrying${backup ? " on Spark 1.2" : ""})`, ms: 0, ok: false, error: String((error as Error)?.message ?? error) }));
   try {
     return await send(false);
   } catch (error) {
@@ -94,7 +94,7 @@ async function callOnce(
       },
     };
     if (opts.effort && engine !== "sparkOpen") body.reasoning_effort = opts.effort;
-    return chat(engine, body, signal);
+    return chat(engine, body, signal, opts.trace, opts.task);
   });
 }
 
@@ -159,7 +159,7 @@ export async function askText(opts: {
   const run = async (engine: Engine) => {
     const { name } = route(engine);
     return timed({ model: name, task: opts.task, ms: opts.timeoutMs, trace: opts.trace }, async (signal) =>
-      (await chat(engine, { messages: [{ role: "system", content: opts.system }, ...opts.history] }, signal)).trim(),
+      (await chat(engine, { messages: [{ role: "system", content: opts.system }, ...opts.history] }, signal, opts.trace, opts.task)).trim(),
     );
   };
   if (opts.engine === "sparkOpen" && hasBaseten) {
