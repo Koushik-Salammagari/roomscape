@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HostSchema, PlanSchema } from "./plan";
 
 /** A still frame grabbed while scanning, stored as an image URL. */
 export const FrameSchema = z.object({
@@ -61,5 +62,11 @@ export const GameSchema = z.object({
   difficulty: z.enum(["easy", "normal", "hard"]),
   stage: GameStage,
   room: RoomSchema,
+  /** Secret handed to the device that created the game; it unlocks answers for host preview. */
+  hostKey: z.string().default(""),
+  host: HostSchema.optional(),
+  plan: PlanSchema.optional(),
+  /** Short, player-safe notes on what each build step did, shown in the build theater. */
+  buildNotes: z.array(z.string()).default([]),
 });
 export type Game = z.infer<typeof GameSchema>;

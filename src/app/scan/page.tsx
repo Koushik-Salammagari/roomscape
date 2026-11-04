@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { Button } from "@/components/ui/Button";
 import { ObjectOutline } from "@/components/game/ObjectOutline";
+import { StepList, type StepState } from "@/components/game/StepList";
 import { cropObject, grabFrame, photoToFrame, type LocalFrame } from "@/lib/client/images";
 import type { Frame, RoomObject } from "@/lib/game/schema";
 
@@ -16,7 +17,6 @@ const FRAME_EVERY_MS = 3000;
 
 type Phase = "camera" | "capturing" | "processing" | "done";
 type StepId = "read" | "mask" | "check";
-type StepState = "waiting" | "active" | "done" | "failed";
 
 const STEPS: { id: StepId; label: string; model: string }[] = [
   { id: "read", label: "Reading your room", model: "Muse Spark 1.3" },
@@ -84,8 +84,13 @@ function ScanScreen() {
 
   const ensureGame = useCallback(async () => {
     if (gameId.current) return gameId.current;
-    const { id } = await postJSON<{ id: string }>("/api/games", { mode, theme, difficulty });
+    const { id, hostKey } = await postJSON<{ id: string; hostKey: string }>("/api/games", { mode, theme, difficulty });
     gameId.current = id;
+    try {
+      localStorage.setItem(`roomscape:host:${id}`, hostKey);
+    } catch {
+      /* private mode: this device just won't get host preview */
+    }
     return id;
   }, [mode, theme, difficulty]);
 
@@ -328,7 +333,7 @@ function ScanScreen() {
               />
             ) : null}
           </div>
-          <StepList steps={steps} />
+          <StepList steps={STEPS.map((x) => ({ ...x, state: steps[x.id] }))} />
           {error ? (
             <div className="flex flex-col gap-3 rounded-3xl border border-danger/50 bg-night-raised p-4">
               <p className="text-sm">{error}</p>
@@ -375,7 +380,7 @@ function ScanScreen() {
           <div className="sticky bottom-0 -mx-5 bg-gradient-to-t from-night via-night/95 to-transparent px-5 pt-6 pb-2">
             <Button
               className="min-h-14 w-full text-lg"
-              onClick={() => router.push(`/game/${gameId.current}/${mode === "host" ? "setup" : "build"}`)}
+              onClick={() => router.push(`/game/${gameId.current}/build`)}
             >
               {mode === "host" ? "Choose where the gift is hidden" : "Build my game"}
             </Button>
@@ -418,42 +423,6 @@ function Filmstrip({ frames }: { frames: LocalFrame[] }) {
         </div>
       ))}
     </div>
-  );
-}
-
-function StepList({ steps }: { steps: Record<StepId, StepState> }) {
-  return (
-    <ol className="flex flex-col gap-3">
-      {STEPS.map((s) => {
-        const state = steps[s.id];
-        return (
-          <li key={s.id} className="flex items-center gap-3">
-            <span
-              className={clsx(
-                "grid size-7 shrink-0 place-items-center rounded-full border-2",
-                state === "done" && "border-tide bg-tide text-night",
-                state === "active" && "border-lantern",
-                state === "waiting" && "border-ink-line",
-                state === "failed" && "border-danger",
-              )}
-              aria-hidden
-            >
-              {state === "done" ? (
-                <svg width="14" height="14" viewBox="0 0 14 14">
-                  <path d="M3 7.5l2.5 2.5L11 4.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-                </svg>
-              ) : state === "active" ? (
-                <span className="size-2.5 animate-ping rounded-full bg-lantern" />
-              ) : null}
-            </span>
-            <span className="flex flex-col">
-              <span className={clsx("font-semibold", state === "waiting" && "text-text-soft")}>{s.label}</span>
-              <span className="text-xs text-text-soft">{s.model}</span>
-            </span>
-          </li>
-        );
-      })}
-    </ol>
   );
 }
 

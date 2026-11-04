@@ -18,7 +18,9 @@ export const POST = route(async (req: Request) => {
     ...body,
     stage: "scanning",
     room: { frames: [], objects: [], summary: "" },
+    hostKey: newId("k"),
+    buildNotes: [],
   };
   await saveGame(game);
-  return NextResponse.json({ id: game.id });
+  return NextResponse.json({ id: game.id, hostKey: game.hostKey });
 });
