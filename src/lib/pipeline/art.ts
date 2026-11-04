@@ -23,7 +23,7 @@ async function save(game: Game, name: string, dataUrl: string): Promise<string> 
 
 /** The frame with the most usable objects makes the best scene. */
 export function bestFrame(game: Game): number {
-  const counts = game.room.frames.map((_, i) => game.room.objects.filter((o) => o.frame === i && o.status !== "listed").length);
+  const counts = game.room.frames.map((_, i) => game.room.objects.filter((o) => o.frame === i && o.status !== "dropped").length);
   return counts.indexOf(Math.max(...counts));
 }
 

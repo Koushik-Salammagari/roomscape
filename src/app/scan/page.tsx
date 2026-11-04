@@ -224,7 +224,7 @@ function ScanScreen() {
     return () => clearInterval(t);
   }, [phase, local.length]);
 
-  const usable = objects.filter((o) => o.status === "verified" || o.status === "masked");
+  const usable = objects.filter((o) => o.status !== "dropped");
   const checked = objects.filter((o) => o.status === "verified");
   const progress = local.length / TARGET_FRAMES;
 
@@ -329,7 +329,7 @@ function ScanScreen() {
               <ObjectOutline
                 key={`o-${shown}`}
                 frame={frames[shown]}
-                objects={objects.filter((o) => o.frame === shown && o.status !== "listed")}
+                objects={objects.filter((o) => o.frame === shown && o.status !== "dropped")}
               />
             ) : null}
           </div>

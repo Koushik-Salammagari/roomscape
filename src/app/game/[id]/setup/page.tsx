@@ -57,7 +57,7 @@ export default function HostSetup({ params }: { params: Promise<{ id: string }> 
       .catch((e) => setError(e.message));
   }, [id]);
 
-  const usable = useMemo(() => game?.room.objects.filter((o) => o.status !== "listed" && o.status !== "dropped") ?? [], [game]);
+  const usable = useMemo(() => game?.room.objects.filter((o) => o.status !== "dropped") ?? [], [game]);
   const nameOf = (oid?: string) => usable.find((o) => o.id === oid)?.name;
 
   const colors = useMemo(() => {

@@ -135,7 +135,8 @@ export async function maskObject(game: Game, object: RoomObject, trace?: Trace):
     .map((o) => ({ o, score: iou(o.box, object.box) + (centreInside(o.box) ? 0.3 : 0) }))
     .sort((a, b) => b.score - a.score)[0];
 
-  if (!best || best.score < 0.15) return { ...object, reachable: false, status: "listed" };
+  // No outline: keep Spark's box. The object still works for taps, codes and the gift spot.
+  if (!best || best.score < 0.15) return { ...object, status: "listed" };
   return {
     ...object,
     box: best.o.box,

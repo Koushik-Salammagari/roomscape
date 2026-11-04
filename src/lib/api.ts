@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { ZodError } from "zod";
 import { GameNotFound } from "@/lib/store";
 import type { CallRecord } from "@/lib/models";
@@ -26,5 +26,11 @@ export const logTrace = (record: CallRecord) => {
   const line = `${new Date().toISOString().slice(11, 19)} ${record.model} | ${record.task} | ${record.ok ? "ok" : "failed"} | ${record.ms}ms${record.fallback ? ` | fallback: ${record.fallback}` : ""}${record.error ? ` | ${record.error}` : ""}`;
   console.log(`[model] ${line}`);
   // Keep the last 100 calls in Redis so failures can be inspected without server logs.
-  redis?.lpush("trace", line).then(() => redis.ltrim("trace", 0, 99)).catch(() => {});
+  // `after` keeps the function alive until the write lands; outside a request it runs directly.
+  const write = () => redis?.lpush("trace", line).then(() => redis.ltrim("trace", 0, 99)).catch(() => {});
+  try {
+    after(write);
+  } catch {
+    void write();
+  }
 };

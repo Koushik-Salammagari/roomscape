@@ -67,9 +67,8 @@ export type Brief = {
 /** Objects a puzzle may use: found by SAM, not blocked by the host, not the prize spot. */
 export function clueObjects(game: Game): RoomObject[] {
   const blocked = new Set(game.host?.blocked ?? []);
-  return game.room.objects.filter(
-    (o) => o.status !== "dropped" && o.status !== "listed" && !blocked.has(o.id) && o.id !== game.host?.prizeObjectId,
-  );
+  // Objects SAM could not outline still count: their Spark box is enough for taps and codes.
+  return game.room.objects.filter((o) => o.status !== "dropped" && !blocked.has(o.id) && o.id !== game.host?.prizeObjectId);
 }
 
 export function makeBrief(game: Game): Brief {

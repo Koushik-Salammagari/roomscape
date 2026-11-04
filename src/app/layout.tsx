@@ -4,6 +4,7 @@ import "@fontsource-variable/manrope/index.css";
 import "@fontsource-variable/jetbrains-mono/index.css";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
+import { FreshBuild } from "@/components/FreshBuild";
 
 export const metadata: Metadata = {
   title: "Roomscape",
@@ -24,7 +25,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" data-theme="lost-treasure">
       <body className="antialiased">
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <FreshBuild />
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );
