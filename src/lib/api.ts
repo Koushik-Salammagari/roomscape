@@ -16,7 +16,10 @@ export function route<Args extends unknown[]>(handler: (...args: Args) => Promis
       if (error instanceof GameNotFound) return NextResponse.json({ error: "This game no longer exists." }, { status: 404 });
       if (error instanceof ZodError) return NextResponse.json({ error: "The request was not in the expected shape.", issues: error.issues }, { status: 400 });
       console.error(error);
-      return NextResponse.json({ error: error instanceof Error ? error.message : "Something went wrong." }, { status: 500 });
+      // Programming errors read badly on a phone; our own errors are written for players.
+      const internal = error instanceof TypeError || error instanceof ReferenceError || error instanceof RangeError || error instanceof SyntaxError;
+      const message = internal || !(error instanceof Error) ? "Something went wrong on our side. Please try again." : error.message;
+      return NextResponse.json({ error: message }, { status: 500 });
     }
   };
 }

@@ -183,21 +183,42 @@ export function stationProblems(s: DesignStation, game: Game, brief: Brief): str
   return problems;
 }
 
-function cipherShift(s: DesignStation, game: Game): { shift: number; rule: string } | null {
-  const keyObject = game.room.objects.find((o) => o.id === s.keyObjectId);
-  const fact = keyObject?.facts.find(
-    (f) => f.verified && f.about.trim().toLowerCase() === s.keyFactAbout?.trim().toLowerCase(),
-  );
-  if (!keyObject || !fact) return null;
+function keyFrom(keyObject: Game["room"]["objects"][number], fact: Game["room"]["objects"][number]["facts"][number]) {
   if (fact.kind === "count") {
     const n = toNumber(fact.value);
     if (n === null || n < 1 || n > 25) return null;
-    return { shift: n, rule: `the ${fact.about} on the ${keyObject.name}` };
+    return { shift: n, rule: `the ${fact.about.replace(/^number of /i, "number of ")} on the ${keyObject.name}` };
   }
   if (fact.kind === "time") {
     const hour = Number(fact.value.match(/(\d{1,2})/)?.[1]);
     if (!hour || hour > 12) return null;
     return { shift: hour, rule: `the hour shown on the ${keyObject.name}` };
+  }
+  return null;
+}
+
+function cipherShift(s: DesignStation, game: Game): { shift: number; rule: string } | null {
+  const keyObject = game.room.objects.find((o) => o.id === s.keyObjectId);
+  if (!keyObject) return null;
+  const about = s.keyFactAbout?.trim().toLowerCase();
+  // Several facts can share a description; use the first that makes a valid key.
+  for (const fact of keyObject.facts) {
+    if (!fact.verified || fact.about.trim().toLowerCase() !== about) continue;
+    const key = keyFrom(keyObject, fact);
+    if (key) return key;
+  }
+  return null;
+}
+
+/** Any valid key in the room, so a cipher can always be built. */
+function anyCipherKey(game: Game): { shift: number; rule: string; objectId: string; about: string } | null {
+  for (const o of game.room.objects) {
+    if (o.status === "dropped") continue;
+    for (const f of o.facts) {
+      if (!f.verified) continue;
+      const key = keyFrom(o, f);
+      if (key) return { ...key, objectId: o.id, about: f.about };
+    }
   }
   return null;
 }
@@ -313,23 +334,20 @@ function templateStation(type: StationType, game: Game, used: Set<string>, title
   }
   if (type === "cipher") {
     const o = pool[0];
-    if (!o) return null;
-    for (const k of game.room.objects) {
-      const fact = k.facts.find((f) => f.verified && f.kind === "count" && (toNumber(f.value) ?? 0) >= 1 && (toNumber(f.value) ?? 0) <= 25);
-      if (fact)
-        return {
-          type,
-          objectId: o.id,
-          title,
-          character: character(o.name),
-          prompt: "Someone scratched a coded word where only you would look.",
-          answer: game.theme === "haunted" ? "LANTERN" : game.theme === "heist" ? "VELVET" : "ANCHOR",
-          keyObjectId: k.id,
-          keyFactAbout: fact.about,
-          hints: ["Each letter has moved forward the same number of places.", `The number comes from the ${k.name}.`, "Shift each letter back and read the word."],
-        };
-    }
-    return null;
+    const key = anyCipherKey(game);
+    if (!o || !key) return null;
+    const keyName = game.room.objects.find((k) => k.id === key.objectId)!.name;
+    return {
+      type,
+      objectId: o.id,
+      title,
+      character: character(o.name),
+      prompt: "Someone scratched a coded word where only you would look.",
+      answer: game.theme === "haunted" ? "LANTERN" : game.theme === "heist" ? "VELVET" : "ANCHOR",
+      keyObjectId: key.objectId,
+      keyFactAbout: key.about,
+      hints: ["Each letter has moved forward the same number of places.", `The number comes from the ${keyName}.`, "Shift each letter back and read the word."],
+    };
   }
   // logic: a fixed puzzle with exactly one solution (exactly one of three statements is false).
   const names = game.theme === "heist" ? ["Vera", "Otto", "June"] : game.theme === "haunted" ? ["Agnes", "Silas", "Wren"] : ["Marlow", "Isla", "Finn"];
@@ -496,7 +514,7 @@ export async function designGame(game: Game, trace?: Trace): Promise<DesignResul
     finalDigits.push(digit);
     let prompt = d.prompt;
     if (d.type === "cipher") {
-      const key = cipherShift(d, game)!;
+      const key = cipherShift(d, game) ?? anyCipherKey(game) ?? { shift: 3, rule: "three letters" };
       prompt = `${d.prompt}\n\nThe coded word: ${caesar(d.answer, key.shift)}\nShift every letter back by ${key.rule}.`;
     }
     const after =
@@ -547,7 +565,7 @@ export function swapStation(game: Game, stationId: string): Station {
   if (!d) throw new Error("There is no other object in this room that fits this kind of clue.");
   let prompt = d.prompt;
   if (d.type === "cipher") {
-    const key = cipherShift(d, game)!;
+    const key = cipherShift(d, game) ?? anyCipherKey(game) ?? { shift: 3, rule: "three letters" };
     prompt = `${d.prompt}\n\nThe coded word: ${caesar(d.answer, key.shift)}\nShift every letter back by ${key.rule}.`;
   }
   const next: Station = {

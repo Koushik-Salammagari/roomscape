@@ -136,9 +136,12 @@ export default function BuildTheater({ params }: { params: Promise<{ id: string 
                 {design.title}
               </motion.h1>
             ) : (
-              <motion.p key="wait" className="font-display text-2xl text-text" animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.4, repeat: Infinity }} exit={{ opacity: 0 }}>
-                Your story is being written…
-              </motion.p>
+              <motion.div key="wait" exit={{ opacity: 0 }} className="flex flex-col gap-2">
+                <motion.p className="font-display text-2xl text-text" animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.4, repeat: Infinity }}>
+                  Your story is being written…
+                </motion.p>
+                {game && !error ? <Ticker names={game.room.objects.filter((o) => o.status !== "dropped").map((o) => o.name)} checking={state.check === "active"} /> : null}
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
@@ -240,5 +243,48 @@ export default function BuildTheater({ params }: { params: Promise<{ id: string 
         ) : null}
       </AnimatePresence>
     </main>
+  );
+}
+
+/** While the designer works, say what is happening, in terms of the player's own things. */
+function Ticker({ names, checking }: { names: string[]; checking: boolean }) {
+  const [i, setI] = useState(0);
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setSeconds((s) => s + 1), 1000);
+    const r = setInterval(() => setI((n) => n + 1), 3800);
+    return () => {
+      clearInterval(t);
+      clearInterval(r);
+    };
+  }, []);
+  const pick = (k: number) => names[(i * 7 + k * 3) % Math.max(1, names.length)] ?? "lamp";
+  const lines = checking
+    ? [
+        "Muse Spark is solving every riddle without the answers",
+        `Making sure only one thing in the room fits the clue about the ${pick(1)}`,
+        "Checking that every digit adds up to the final lock",
+        "Rewriting any riddle that has two answers",
+      ]
+    : [
+        `Muse Wonder is reading the ${names.length} things in your room`,
+        `Deciding who the ${pick(0)} is in this story`,
+        `Writing a riddle only the ${pick(2)} can answer`,
+        `Giving the ${pick(4)} a voice`,
+        "Hiding a digit of the final lock in each clue",
+        "Writing three hints for every clue, from gentle to obvious",
+      ];
+  const line = lines[i % lines.length];
+  return (
+    <div className="flex items-start gap-2 text-sm text-text-soft">
+      <span className="font-mono tabular-nums text-lantern">
+        {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}
+      </span>
+      <AnimatePresence mode="wait">
+        <motion.span key={line} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35 }} className="min-w-0 leading-snug">
+          {line}
+        </motion.span>
+      </AnimatePresence>
+    </div>
   );
 }
