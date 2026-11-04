@@ -1,4 +1,5 @@
 import type { Game } from "./schema";
+import { hasBaseten } from "@/lib/env";
 
 export type MakingStep = { model: string; did: string };
 
@@ -32,7 +33,7 @@ export function makingOf(game: Game): MakingStep[] {
   );
   if (art) steps.push({ model: "Muse Image 1.0", did: `Painted ${art} pictures from your own room: the scene, the characters and torn picture clues.` });
   steps.push(
-    { model: "Muse Spark Open", did: "Plays each character when you talk to it, and judges photo answers." },
+    { model: hasBaseten ? "Muse Spark Open" : "Muse Spark 1.3", did: "Plays each character when you talk to it, and judges photo answers." },
     { model: "Muse Voice Transcribe 1.0", did: "Hears what you say to the characters." },
   );
   return steps;

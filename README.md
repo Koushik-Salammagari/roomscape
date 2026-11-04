@@ -4,7 +4,7 @@
 
 **Live:** https://roomscape-alpha.vercel.app · Built for the Meta Global AI Developer Hackathon (Oct 26 to Nov 4, 2026). Everything here was written during the event.
 
-<p align="center"><img src="docs/screens.png" alt="Scan, host setup, a talking clue, the final lock" width="900"></p>
+<p align="center"><img src="docs/screens.jpg" alt="Opening scene, case board, a talking clue, the final lock, how the game was made" width="900"></p>
 
 ## What it does
 
