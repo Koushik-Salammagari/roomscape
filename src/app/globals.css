@@ -89,20 +89,24 @@
 }
 
 html {
-  background: var(--night);
+  background-color: var(--night);
+  background-image: var(--wash);
+  background-attachment: fixed;
+  /* iOS ignores fixed backgrounds; never tile the wash down a long page. */
+  background-repeat: no-repeat;
+  background-size: 100% 100lvh;
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
   min-height: 100dvh;
-  background: var(--night);
-  background-image: var(--wash);
-  background-attachment: fixed;
+  /* The page colour and wash live on html, so they cover the whole canvas. */
+  background: transparent;
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 1rem;
   line-height: 1.55;
-  transition: background-color 0.6s ease, color 0.6s ease;
+  transition: color 0.6s ease;
 }
 
 /* Paper grain over everything, kept faint so photos stay true. */
@@ -140,3 +144,4 @@ h1, h2, h3 {
     transition-duration: 0.01ms !important;
   }
 }
+
