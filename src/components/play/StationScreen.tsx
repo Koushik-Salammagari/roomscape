@@ -1,0 +1,330 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
+import clsx from "clsx";
+import { Button } from "@/components/ui/Button";
+import { PaperCard } from "@/components/ui/PaperCard";
+import { Character } from "./Character";
+import { CameraFinder, type FindResult, type Shot } from "./CameraFinder";
+import { RoomTapper } from "./RoomTapper";
+import { UnlockBurst } from "./UnlockBurst";
+import { postJSON } from "@/lib/client/game";
+import { cue } from "@/lib/client/player";
+import type { PlayerGame } from "@/lib/game/view";
+
+export type BoardStation = { id: string; open: boolean; solved: boolean; digit?: number; hintsShown: number; shownHints: string[] };
+export type Board = { startedAt: string; finishedAt?: string; stations: BoardStation[]; allSolved: boolean; hints: number; stars?: number };
+type PlanStation = NonNullable<PlayerGame["plan"]>["stations"][number];
+type Attempt =
+  | { kind: "text"; value: string }
+  | { kind: "tap"; frame: number; x: number; y: number }
+  | { kind: "photo"; dataUrl: string; width: number; height: number };
+type AnswerReply = FindResult & { digit?: number; state: Board };
+
+type Props = {
+  gameId: string;
+  game: PlayerGame;
+  station: PlanStation;
+  board: BoardStation;
+  index: number;
+  player: string;
+  onBoard: (b: Board) => void;
+  onClose: () => void;
+};
+
+const TYPE_LABEL: Record<string, string> = {
+  "riddle-hunt": "Riddle",
+  "observation-code": "Look closely",
+  cipher: "Code",
+  logic: "Brain teaser",
+  "picture-fragment": "Torn picture",
+};
+
+export function StationScreen({ gameId, game, station, board, index, player, onBoard, onClose }: Props) {
+  const [line, setLine] = useState(station.character.greeting);
+  const [busy, setBusy] = useState(false);
+  const [solvedDigit, setSolvedDigit] = useState<number | undefined>(board.solved ? board.digit : undefined);
+  const [camera, setCamera] = useState(false);
+  const [tapping, setTapping] = useState(false);
+  const [hints, setHints] = useState<string[]>(board.shownHints);
+  const shake = useAnimationControls();
+  const foundDigit = useRef<number | undefined>(undefined);
+
+  const send = async (attempt: Attempt): Promise<AnswerReply> => {
+    const reply = await postJSON<AnswerReply>(`/api/games/${gameId}/play/answer`, { player, stationId: station.id, attempt });
+    onBoard(reply.state);
+    return reply;
+  };
+
+  const handle = (reply: AnswerReply) => {
+    if (reply.correct) {
+      cue("unlock");
+      setSolvedDigit(reply.digit);
+      setLine("You found it. Here’s your digit for the final lock.");
+    } else {
+      cue("wrong");
+      setLine(reply.message ?? "Not quite.");
+      shake.start({ x: [0, -10, 10, -6, 6, 0], transition: { duration: 0.4 } });
+    }
+  };
+
+  const submit = async (attempt: Attempt) => {
+    setBusy(true);
+    try {
+      handle(await send(attempt));
+    } catch (e) {
+      setLine(e instanceof Error ? e.message : "That check failed. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const hint = async () => {
+    setBusy(true);
+    try {
+      const r = await postJSON<{ hint: string; level: number; state: Board }>(`/api/games/${gameId}/play/hint`, { player, stationId: station.id });
+      setHints((h) => [...h.slice(0, r.level - 1), r.hint]);
+      setLine(r.hint);
+      onBoard(r.state);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const isHunt = station.type === "riddle-hunt" || station.type === "picture-fragment";
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-40 overflow-y-auto bg-night"
+      style={{ backgroundImage: "var(--wash)" }}
+      initial={{ y: "100%" }}
+      animate={{ y: 0 }}
+      exit={{ y: "100%" }}
+      transition={{ type: "spring", stiffness: 300, damping: 34 }}
+    >
+      <div
+        className="mx-auto flex min-h-full max-w-md flex-col gap-6 pb-10"
+        style={{
+          paddingTop: "max(1rem, env(safe-area-inset-top))",
+          paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
+          paddingRight: "max(1.25rem, env(safe-area-inset-right))",
+        }}
+      >
+        <header className="flex items-center justify-between">
+          <button type="button" onClick={onClose} className="-ml-2 rounded-xl px-2 py-2 text-sm text-text-soft">
+            Case board
+          </button>
+          <span className="text-sm text-text-soft">
+            Clue {index + 1} of {game.plan!.stations.length}: {TYPE_LABEL[station.type]}
+          </span>
+        </header>
+
+        <h1 className="font-display text-[2rem] leading-tight">{station.title}</h1>
+        <Character name={station.character.name} art={station.character.art} line={line} />
+
+        {solvedDigit !== undefined ? (
+          <div className="relative flex flex-col items-center gap-4 py-8">
+            <UnlockBurst />
+            <motion.div
+              className="grid size-28 place-items-center rounded-3xl border-2 border-lantern bg-night-raised font-mono text-6xl font-bold text-lantern"
+              initial={{ scale: 0.3, rotate: -20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 340, damping: 14 }}
+            >
+              {solvedDigit}
+            </motion.div>
+            <p className="text-center text-text-soft">
+              Digit {index + 1} of the final lock. It’s saved on your case board.
+            </p>
+            <Button onClick={onClose} className="min-h-14 w-full text-lg">
+              Back to the case board
+            </Button>
+          </div>
+        ) : (
+          <motion.div animate={shake} className="flex flex-col gap-5">
+            {station.type === "picture-fragment" && station.image ? (
+              <PaperCard tilt={-1.5} className="p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={station.image} alt="A torn picture of part of the room" className="w-full rounded-sm" />
+                <p className="mt-3 text-[0.95rem] leading-relaxed">{station.prompt}</p>
+              </PaperCard>
+            ) : (
+              <PaperCard tilt={-0.8}>
+                <PromptText text={station.prompt} />
+              </PaperCard>
+            )}
+
+            {station.type === "logic" ? (
+              <div className="flex flex-col gap-2">
+                {(station.statements ?? []).map((s) => (
+                  <p key={s} className="rounded-2xl border border-ink-line bg-night-raised px-4 py-3 text-[0.95rem]">
+                    {s}
+                  </p>
+                ))}
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {(station.options ?? []).map((o) => (
+                    <Button key={o} variant="quiet" disabled={busy} onClick={() => submit({ kind: "text", value: o })}>
+                      {o}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {station.type === "observation-code" ? <NumberPad busy={busy} onSubmit={(v) => submit({ kind: "text", value: v })} /> : null}
+            {station.type === "cipher" ? <WordEntry busy={busy} onSubmit={(v) => submit({ kind: "text", value: v })} /> : null}
+
+            {isHunt ? (
+              <div className="flex flex-col gap-3">
+                <Button onClick={() => setCamera(true)} className="min-h-14 w-full text-lg">
+                  Find it with the camera
+                </Button>
+                <Button variant="quiet" onClick={() => setTapping((t) => !t)}>
+                  {tapping ? "Hide the room photos" : "Tap it in the room photos"}
+                </Button>
+                {tapping ? (
+                  <RoomTapper frames={game.room.frames} busy={busy} onTap={(t) => submit({ kind: "tap", ...t })} />
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-2 border-t border-ink-line pt-4">
+              <Button variant="ghost" disabled={busy || hints.length >= 3} onClick={hint} className="self-start">
+                {hints.length >= 3 ? "No hints left" : `Ask ${station.character.name} for a hint (${hints.length + 1} of 3)`}
+              </Button>
+              {hints.length ? (
+                <ol className="flex flex-col gap-1.5 text-sm text-text-soft">
+                  {hints.map((h, i) => (
+                    <li key={i}>
+                      <span className="font-semibold text-text">{["Nudge", "Pointer", "Answer"][i]}: </span>
+                      {h}
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {camera ? (
+          <CameraFinder
+            onClose={() => setCamera(false)}
+            onShot={async (shot: Shot) => {
+              const reply = await send({ kind: "photo", ...shot });
+              if (reply.correct) foundDigit.current = reply.digit;
+              else cue("wrong");
+              return reply;
+            }}
+            onFound={() => {
+              setCamera(false);
+              cue("unlock");
+              setSolvedDigit(foundDigit.current);
+              setLine("You found it. Here’s your digit for the final lock.");
+            }}
+          />
+        ) : null}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/** Renders a prompt, setting the cipher's coded word apart in big monospaced letters. */
+function PromptText({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col gap-3">
+      {text.split("\n").filter(Boolean).map((p, i) => {
+        const coded = p.match(/^The coded word: (.+)$/);
+        if (coded)
+          return (
+            <p key={i} className="text-center font-mono text-3xl font-bold tracking-[0.25em]">
+              {coded[1]}
+            </p>
+          );
+        return (
+          <p key={i} className="font-display text-[1.15rem] leading-snug">
+            {p}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function NumberPad({ busy, onSubmit }: { busy: boolean; onSubmit: (v: string) => void }) {
+  const [value, setValue] = useState("");
+  const press = (d: string) => {
+    cue("tap");
+    setValue((v) => (v + d).slice(0, 3));
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid h-16 place-items-center rounded-2xl border border-ink-line bg-night-deep font-mono text-4xl font-semibold" aria-live="polite">
+        {value || <span className="text-text-soft">?</span>}
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
+          <button key={d} type="button" onClick={() => press(d)} className="h-14 rounded-2xl bg-night-raised font-mono text-2xl active:scale-95">
+            {d}
+          </button>
+        ))}
+        <button type="button" onClick={() => setValue((v) => v.slice(0, -1))} className="h-14 rounded-2xl bg-night-raised text-sm text-text-soft" aria-label="Delete">
+          Delete
+        </button>
+        <button type="button" onClick={() => press("0")} className="h-14 rounded-2xl bg-night-raised font-mono text-2xl">
+          0
+        </button>
+        <Button disabled={!value || busy} busy={busy} onClick={() => onSubmit(value)} className="h-14 min-h-0 px-0">
+          Check
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+function WordEntry({ busy, onSubmit }: { busy: boolean; onSubmit: (v: string) => void }) {
+  const [value, setValue] = useState("");
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="-mx-1 flex flex-wrap justify-center gap-1" aria-label="Alphabet with letter numbers">
+        {ALPHABET.map((l, i) => (
+          <span key={l} className="flex w-[2.05rem] flex-col items-center rounded-md bg-night-deep py-1">
+            <span className="font-mono text-sm font-semibold">{l}</span>
+            <span className="font-mono text-[0.6rem] text-text-soft">{i + 1}</span>
+          </span>
+        ))}
+      </div>
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (value.trim()) onSubmit(value);
+        }}
+      >
+        <label htmlFor="cipher-answer" className="sr-only">
+          The decoded word
+        </label>
+        <input
+          id="cipher-answer"
+          value={value}
+          onChange={(e) => setValue(e.target.value.toUpperCase())}
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="The decoded word"
+          className={clsx(
+            "min-h-14 min-w-0 flex-1 rounded-2xl border border-ink-line bg-night-deep px-4 font-mono text-xl tracking-widest",
+            "placeholder:font-sans placeholder:text-base placeholder:tracking-normal placeholder:text-text-soft",
+          )}
+        />
+        <Button type="submit" disabled={!value.trim() || busy} busy={busy} className="min-h-14">
+          Check
+        </Button>
+      </form>
+    </div>
+  );
+}

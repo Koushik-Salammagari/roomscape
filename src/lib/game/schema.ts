@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { HostSchema, PlanSchema } from "./plan";
+import { PlayerProgressSchema } from "./progress";
 
 /** A still frame grabbed while scanning, stored as an image URL. */
 export const FrameSchema = z.object({
@@ -68,5 +69,7 @@ export const GameSchema = z.object({
   plan: PlanSchema.optional(),
   /** Short, player-safe notes on what each build step did, shown in the build theater. */
   buildNotes: z.array(z.string()).default([]),
+  /** playerId → progress. Each device that plays keeps its own run. */
+  progress: z.record(z.string(), PlayerProgressSchema).default({}),
 });
 export type Game = z.infer<typeof GameSchema>;

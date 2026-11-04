@@ -6,9 +6,10 @@ import type { Game } from "./schema";
  * the server; the play routes hand them out one step at a time.
  */
 export function playerView(game: Game) {
-  const { hostKey: _key, host: _host, plan, room, ...rest } = game;
+  const { hostKey: _key, host: _host, progress: _progress, plan, room, ...rest } = game;
   void _key;
   void _host;
+  void _progress;
   return {
     ...rest,
     room: {

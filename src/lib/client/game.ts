@@ -8,8 +8,8 @@ export function hostKeyFor(id: string): string | null {
   }
 }
 
-export async function fetchGame<T>(id: string): Promise<T> {
-  const key = hostKeyFor(id);
+export async function fetchGame<T>(id: string, opts: { asPlayer?: boolean } = {}): Promise<T> {
+  const key = opts.asPlayer ? null : hostKeyFor(id);
   const res = await fetch(`/api/games/${id}`, { headers: key ? { "x-host-key": key } : {}, cache: "no-store" });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "This game could not be loaded.");
