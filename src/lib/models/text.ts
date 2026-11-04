@@ -93,7 +93,8 @@ async function callOnce(
         json_schema: { name: opts.schemaName, schema: jsonSchemaOf(opts.schema) },
       },
     };
-    if (opts.effort && engine !== "sparkOpen") body.reasoning_effort = opts.effort;
+    // Baseten's Spark Open takes no effort setting; Meta-hosted models do (including Spark standing in for it).
+    if (opts.effort && route(engine).name !== "sparkOpen") body.reasoning_effort = opts.effort;
     return chat(engine, body, signal, opts.trace, opts.task);
   });
 }
@@ -148,6 +149,7 @@ export async function askText(opts: {
   task: string;
   system: string;
   history: { role: "user" | "assistant"; content: string }[];
+  effort?: Effort;
   timeoutMs: number;
   trace?: Trace;
   mock: () => string;
@@ -159,7 +161,18 @@ export async function askText(opts: {
   const run = async (engine: Engine) => {
     const { name } = route(engine);
     return timed({ model: name, task: opts.task, ms: opts.timeoutMs, trace: opts.trace }, async (signal) =>
-      (await chat(engine, { messages: [{ role: "system", content: opts.system }, ...opts.history] }, signal, opts.trace, opts.task)).trim(),
+      (
+        await chat(
+          engine,
+          {
+            messages: [{ role: "system", content: opts.system }, ...opts.history],
+            ...(opts.effort && route(engine).name !== "sparkOpen" ? { reasoning_effort: opts.effort } : {}),
+          },
+          signal,
+          opts.trace,
+          opts.task,
+        )
+      ).trim(),
     );
   };
   if (opts.engine === "sparkOpen" && hasBaseten) {

@@ -117,7 +117,8 @@ export async function judge(game: Game, station: Station, attempt: Attempt, trac
       parts: [text("Photo 1, the player's camera:"), image(attempt.dataUrl), text(`Photo 2, the ${target.name} from the scan:`), image(reference)],
       schema: SameObject,
       schemaName: "same_object",
-      timeoutMs: 15_000,
+      effort: "low",
+      timeoutMs: 20_000,
       trace,
       mock: () => ({ same: true, reason: "Same shape and colour." }),
     }).catch(() => null);

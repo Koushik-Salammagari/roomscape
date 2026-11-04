@@ -64,7 +64,7 @@ export async function paintGame(game: Game, onEvent: (e: ArtEvent) => void, trac
       (async () => {
         const img = await generateImage({
           task: `Bring the ${object.name} to life`,
-          prompt: `Turn ${subject} into a storybook character named ${station.character.name}: ${station.character.persona} Keep its real shape, colours and materials so it is clearly the same object, and give it two expressive eyes and a friendly mouth. Show the whole object centred on a plain deep-blue background with soft light, like a character portrait.`,
+          prompt: `Redraw ${subject} from scratch as a storybook character named ${station.character.name}: ${station.character.persona} This is an illustration, not a photo edit. Keep its real shape, colours and materials so it is clearly the same object, and give it big expressive eyes and a friendly mouth on its most recognisable part. Square portrait: the character fills most of the frame and is centred on a plain deep-blue background with soft light. If the object is tall and thin, frame its top half up close so the face is large.`,
           references: [reference],
           timeoutMs: 90_000,
           trace,

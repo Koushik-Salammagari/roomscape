@@ -96,7 +96,7 @@ function designerSystem(brief: Brief): string {
   return `You design a short treasure-hunt mystery that plays out in one real room, for adults at home. Players walk around the room, look closely at real objects, solve puzzles, and each solved puzzle gives one digit of a final lock.
 
 Story world: ${THEME_BRIEF[brief.theme]}
-Write in second person, present tense, warm and witty. Short sentences. No violence, gore, weapons or anything frightening for real.
+Voice: warm, witty and vivid, like a good escape-room host. Characters speak in the first person, in their own personality, and talk to the player as "you". Vary sentence rhythm: never start two sentences in a row with "You". Prompts read like a moment in the story, not an instruction list. No violence, gore, weapons or anything frightening for real.
 
 Make exactly ${count} stations, in this order of types: ${brief.types.join(", ")}.
 Every station uses a DIFFERENT object, and every objectId must be copied exactly from the room list. Never invent objects or details.
@@ -106,13 +106,13 @@ Each object in a station speaks as a character: give it a name that suits the st
 In riddle-hunt and picture-fragment stations the character IS the object being searched for and is speaking from hiding: its name, persona and greeting must not reveal what kind of object it is (no "Old Wick" for a lamp). It can tease, for example "You are closer than you think."
 
 Station rules:
-- riddle-hunt: "prompt" is a riddle of 2 to 4 short lines that leads to the object through its look, use or a verified detail. It must not contain the object's name or an obvious synonym. "answer" is the objectId. The object must be reachable.
-- observation-code: the player looks closely at the object and counts something. Use one of the object's verified facts of kind "count": copy its "about" text exactly into "factAbout", and put its value as digits in "answer". The prompt names the object and says what to count, in story voice.
+- riddle-hunt: "prompt" is a riddle of 2 to 4 short lines, ideally rhyming, spoken by the hiding object ("I ..."), that leads to it through its look, use or a verified detail. It must not contain the object's name or an obvious synonym. "answer" is the objectId. The object must be reachable.
+- observation-code: the player looks closely at the object and counts something. Use one of the object's verified facts of kind "count", preferring values from 2 to 9: copy its "about" text exactly into "factAbout", and put its value as digits in "answer". The prompt names the object and says what to count, in story voice.
 - picture-fragment: the player is shown a painted close-up of part of the room and must find where it is. "prompt" is 1 or 2 sentences of story setting it up. "answer" is the objectId. The object must be reachable.
-- cipher: "answer" is ONE word of 4 to 8 letters (A to Z only) that matters to the story. Choose a verified fact of kind "count" (value 1 to 25) or "time" on any object for the shift: set "keyObjectId" and copy its "about" exactly into "keyFactAbout". "prompt" is 1 or 2 sentences of story around a coded message; the app adds the coded word and the decoding rule itself.
+- cipher: "answer" is ONE word of 4 to 8 letters (A to Z only) that matters to the story. Choose a verified fact of kind "count" (value 2 to 25 preferred; 1 only if nothing else exists) or "time" on any object for the shift: set "keyObjectId" and copy its "about" exactly into "keyFactAbout". "prompt" is 1 or 2 sentences of story around a coded message; the app adds the coded word and the decoding rule itself.
 - logic: three characters each make one statement in "statements" (write them as: Name says: "..."). "options" holds the three names. Exactly one answer must follow by pure reasoning, with no outside knowledge and no room details needed. "answer" is one of the options, copied exactly. The prompt states the rule (for example, exactly one of them is lying) and the question.
 
-Hints, exactly 3 per station: first a gentle in-character nudge, then a pointer that narrows it down, then a reveal that states the answer and explains why.
+Hints, exactly 3 per station, spoken by the station's character: first a gentle nudge, then a pointer that narrows it down, then a reveal that states the answer and explains why.
 
 ${brief.mode === "host" && brief.prize
     ? `This is a hosted hunt. A real gift is hidden ${brief.prize.note} (the ${brief.prize.name}). "reveal" tells the players, in story voice, exactly where to look for it. "treasure" describes the gift as a surprise without saying what it is. Never use the ${brief.prize.name} in any station.`
@@ -187,12 +187,14 @@ function keyFrom(keyObject: Game["room"]["objects"][number], fact: Game["room"][
   if (fact.kind === "count") {
     const n = toNumber(fact.value);
     if (n === null || n < 1 || n > 25) return null;
-    return { shift: n, rule: `the ${fact.about.replace(/^number of /i, "number of ")} on the ${keyObject.name}` };
+    const what = fact.about.replace(/^(the )?(number|count) of /i, "").replace(/^how many /i, "");
+    const there = nameWords(keyObject.name).some((w) => what.toLowerCase().includes(w)) ? "" : ` on the ${keyObject.name}`;
+    return { shift: n, rule: `Count the ${what}${there}, then shift every letter back by that many places.` };
   }
   if (fact.kind === "time") {
     const hour = Number(fact.value.match(/(\d{1,2})/)?.[1]);
     if (!hour || hour > 12) return null;
-    return { shift: hour, rule: `the hour shown on the ${keyObject.name}` };
+    return { shift: hour, rule: `Read the hour on the ${keyObject.name}, then shift every letter back by that many places.` };
   }
   return null;
 }
@@ -297,7 +299,21 @@ function templateStation(type: StationType, game: Game, used: Set<string>, title
   if (type === "riddle-hunt" || type === "picture-fragment") {
     const o = pool.find((p) => p.reachable && p.facts.some((f) => f.verified)) ?? pool.find((p) => p.reachable);
     if (!o) return null;
-    const detail = o.facts.find((f) => f.verified);
+    // Describe the object by its checked looks, never by its name.
+    const name = nameWords(o.name);
+    const safe = (v: string) => !name.some((w) => v.toLowerCase().includes(w));
+    const LINE: Partial<Record<string, (v: string) => string>> = {
+      color: (v) => `My colour is ${v}.`,
+      material: (v) => `I am made of ${v}.`,
+      shape: (v) => `My shape: ${v}.`,
+      pattern: (v) => `My pattern: ${v}.`,
+      count: (v) => `Count me and you get ${v}.`,
+    };
+    const clues = o.facts
+      .filter((f) => LINE[f.kind] && safe(f.value))
+      .sort((a, b) => Number(b.verified) - Number(a.verified))
+      .slice(0, 3)
+      .map((f) => LINE[f.kind]!(f.value.replace(/\.$/, "")));
     return {
       type,
       objectId: o.id,
@@ -305,12 +321,12 @@ function templateStation(type: StationType, game: Game, used: Set<string>, title
       character: character(o.name, true),
       prompt:
         type === "riddle-hunt"
-          ? `Look for something ${detail ? `whose ${detail.about} is ${detail.value}` : "you pass every day"}. It has been waiting for you.`
+          ? `${clues.length ? clues.join(" ") : "You pass me every day."} I am somewhere in this room. Find me.`
           : "A torn corner of an old painting. Find the spot in this room that it shows.",
       answer: o.id,
       hints: [
         "Take a slow look around the room.",
-        `It is ${detail ? `the thing whose ${detail.about} is ${detail.value}` : `in the room you scanned`}.`,
+        clues[0] ? `Start with this one: ${clues[0]}` : "It is something you could sit near.",
         `It is the ${o.name}.`,
       ],
     };
@@ -514,8 +530,8 @@ export async function designGame(game: Game, trace?: Trace): Promise<DesignResul
     finalDigits.push(digit);
     let prompt = d.prompt;
     if (d.type === "cipher") {
-      const key = cipherShift(d, game) ?? anyCipherKey(game) ?? { shift: 3, rule: "three letters" };
-      prompt = `${d.prompt}\n\nThe coded word: ${caesar(d.answer, key.shift)}\nShift every letter back by ${key.rule}.`;
+      const key = cipherShift(d, game) ?? anyCipherKey(game) ?? { shift: 3, rule: "Shift every letter back by three places." };
+      prompt = `${d.prompt}\n\nThe coded word: ${caesar(d.answer, key.shift)}\n${key.rule}`;
     }
     const after =
       d.type === "cipher" ? openIds : d.type === "logic" ? ids.filter((_, j) => brief.types[j] === "cipher") : [];
@@ -565,8 +581,8 @@ export function swapStation(game: Game, stationId: string): Station {
   if (!d) throw new Error("There is no other object in this room that fits this kind of clue.");
   let prompt = d.prompt;
   if (d.type === "cipher") {
-    const key = cipherShift(d, game) ?? anyCipherKey(game) ?? { shift: 3, rule: "three letters" };
-    prompt = `${d.prompt}\n\nThe coded word: ${caesar(d.answer, key.shift)}\nShift every letter back by ${key.rule}.`;
+    const key = cipherShift(d, game) ?? anyCipherKey(game) ?? { shift: 3, rule: "Shift every letter back by three places." };
+    prompt = `${d.prompt}\n\nThe coded word: ${caesar(d.answer, key.shift)}\n${key.rule}`;
   }
   const next: Station = {
     ...old,

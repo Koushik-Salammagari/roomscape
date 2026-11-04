@@ -75,7 +75,8 @@ export async function talkInCharacter(opts: {
       task: `Talk as ${station.character.name}`,
       system,
       history,
-      timeoutMs: 20_000,
+      effort: "low",
+      timeoutMs: 25_000,
       trace: opts.trace,
       mock: () => `Ooh, good question. I can’t just tell you, but look closely at what the clue says, and trust your eyes.`,
     });
