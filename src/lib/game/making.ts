@@ -11,7 +11,12 @@ export function makingOf(game: Game): MakingStep[] {
   const plan = game.plan;
   const steps: MakingStep[] = [
     { model: "Muse Spark 1.3", did: `Read ${game.room.frames.length} photos of the room and listed ${objects.length} objects with ${facts.length} details.` },
-    { model: "SAM 3.1", did: `Traced the exact outline of ${outlined} objects, so taps and photos can be checked.` },
+    {
+      model: "SAM 3.1",
+      did: outlined
+        ? `Traced the exact outline of ${outlined} objects, so taps and photos can be checked${outlined < objects.length ? ` (${objects.length - outlined} use a box)` : ""}.`
+        : "Looked for the exact outline of every object, so taps and photos can be checked.",
+    },
     { model: "Muse Spark 1.3", did: `Looked at every close-up a second time. ${checked} details matched both times and are used in puzzles.` },
   ];
   if (!plan) return steps;

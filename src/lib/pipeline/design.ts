@@ -470,6 +470,22 @@ export async function designGame(game: Game, trace?: Trace): Promise<DesignResul
     notes.push(`${problems.size} puzzle${problems.size > 1 ? "s were" : " was"} replaced with a tested backup.`);
   }
 
+  // Last line of defence: every station must pass the code rules as it will be built.
+  {
+    const used = new Set(stations.map((s) => s?.objectId).filter(Boolean) as string[]);
+    stations.forEach((s, i) => {
+      const bad = !s || stationProblems(s, game, brief).filter((p) => !p.includes("blind tester")).length > 0;
+      if (!bad) return;
+      console.warn("[design] station failed at assembly", i, s ? stationProblems(s, game, brief) : "missing");
+      if (s) used.delete(s.objectId);
+      const t = templateStation(brief.types[i], game, used, s?.title ?? "A hidden clue");
+      if (!t) throw new Error("The room does not have enough checked details for this difficulty. Try Easy, or scan more of the room.");
+      stations[i] = t;
+      used.add(t.objectId);
+      checks[i] = "template";
+    });
+  }
+
   // Assemble: unlock order, digits, the coded word.
   const finalDigits: number[] = [];
   const ids = stations.map(() => newId("s"));
