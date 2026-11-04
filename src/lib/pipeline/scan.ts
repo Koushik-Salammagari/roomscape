@@ -27,7 +27,7 @@ export type InventoryReply = z.infer<typeof InventoryReply>;
 const INVENTORY_SYSTEM = `You catalogue a real room for a treasure-hunt game. Players will walk up to objects, look closely at them and answer questions about them.
 
 Rules:
-- List 15 to 25 distinct physical objects. Prefer objects with details worth noticing: books, clocks, plants, lamps, cushions, frames, mugs, boxes, shelves, rugs, bottles, plush toys, board games.
+- List 12 to 18 distinct physical objects, each kind once. Treat a row of books as one object ("row of books on the top shelf"), never individual books, leaves or tiles. Prefer objects with details worth noticing: books, clocks, plants, lamps, cushions, frames, mugs, boxes, shelves, rugs, bottles, plush toys, board games.
 - Skip people, pets, screens showing content, documents, mail, medicine, anything private, and anything a player would need to climb to reach.
 - "name" is a short natural name ("floor lamp"). "phrase" is the 1 to 3 word noun phrase an object detector should search for ("floor lamp").
 - "frame" is the number of the image where the object is clearest (images are numbered from 1).
