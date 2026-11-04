@@ -7,13 +7,19 @@
  */
 export type VoiceStyle = "low" | "high" | "warm" | "crisp" | "creaky";
 
+// Gentle shifts only: big pitch or speed changes are what make phone voices sound robotic.
 const STYLE: Record<VoiceStyle, { pitch: number; rate: number }> = {
-  low: { pitch: 0.7, rate: 0.92 },
-  high: { pitch: 1.45, rate: 1.04 },
-  warm: { pitch: 1.0, rate: 0.96 },
-  crisp: { pitch: 1.15, rate: 1.08 },
-  creaky: { pitch: 0.82, rate: 0.84 },
+  low: { pitch: 0.9, rate: 0.9 },
+  high: { pitch: 1.12, rate: 0.95 },
+  warm: { pitch: 1.0, rate: 0.92 },
+  crisp: { pitch: 1.05, rate: 0.97 },
+  creaky: { pitch: 0.93, rate: 0.86 },
 };
+
+/** Novelty and old formant voices that ship on Apple devices and sound robotic. */
+const ROBOTIC = /\b(albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|fred|junior|ralph|kathy|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley|hysterical)\b/i;
+/** Natural voices, best first. */
+const NATURAL = ["samantha", "daniel", "karen", "moira", "tessa", "serena", "arthur", "martha", "catherine", "gordon", "aaron", "nicky", "rishi", "google us english", "google uk english"];
 
 const MUTE_KEY = "roomscape:muted";
 
@@ -38,11 +44,21 @@ function hash(s: string) {
   return [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 }
 
+function quality(v: SpeechSynthesisVoice): number {
+  const id = `${v.name} ${v.voiceURI}`.toLowerCase();
+  if (/premium/.test(id)) return 3;
+  if (/enhanced|neural|natural/.test(id)) return 2;
+  return NATURAL.some((n) => id.includes(n)) ? 1 : 0;
+}
+
 function voiceFor(name: string): SpeechSynthesisVoice | undefined {
   const voices = window.speechSynthesis?.getVoices() ?? [];
-  const english = voices.filter((v) => v.lang.toLowerCase().startsWith("en"));
-  const pool = english.length ? english : voices;
-  return pool.length ? pool[hash(name) % pool.length] : undefined;
+  const english = voices.filter((v) => v.lang.toLowerCase().startsWith("en") && !ROBOTIC.test(v.name));
+  if (!english.length) return undefined;
+  // Use only the best quality available on this device, then give each character a stable pick.
+  const best = Math.max(...english.map(quality));
+  const pool = english.filter((v) => quality(v) === best).sort((a, b) => a.name.localeCompare(b.name));
+  return pool[hash(name) % pool.length];
 }
 
 export type SpeakHandlers = { onWord?: (wordIndex: number) => void; onEnd?: () => void };
