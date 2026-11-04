@@ -39,5 +39,10 @@ export const POST = route(async (req: Request, { params }: { params: Promise<{ i
     if (!verdict.correct) p.wrong += 1;
     state = boardState(g, p);
   });
-  return NextResponse.json({ ...verdict, digit: verdict.correct ? station.digit : undefined, state });
+  return NextResponse.json({
+    ...verdict,
+    digit: verdict.correct ? station.digit : undefined,
+    art: verdict.correct ? station.character.art : undefined,
+    state,
+  });
 });

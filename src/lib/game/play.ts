@@ -18,6 +18,7 @@ export function boardState(game: Game, progress: PlayerProgress) {
       open: isOpen(plan, progress, s.id),
       solved: Boolean(progress.solved[s.id]),
       digit: progress.solved[s.id] ? s.digit : undefined,
+      art: progress.solved[s.id] ? s.character.art : undefined,
       hintsShown: progress.hints[s.id] ?? 0,
       shownHints: s.hints.slice(0, progress.hints[s.id] ?? 0),
     })),

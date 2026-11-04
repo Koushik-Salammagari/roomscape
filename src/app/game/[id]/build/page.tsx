@@ -177,7 +177,14 @@ export default function BuildTheater({ params }: { params: Promise<{ id: string 
               <div key={s.id} className="flex w-20 shrink-0 flex-col items-center gap-2 text-center">
                 <div className="relative size-20 overflow-hidden rounded-full border-2 border-ink-line bg-night-raised">
                   <AnimatePresence>
-                    {portraits[s.id] ? (
+                    {(s.type === "riddle-hunt" || s.type === "picture-fragment") && game?.mode !== "host" ? (
+                      <span className="absolute inset-0 grid place-items-center" title="Hiding until you find it">
+                        <span className="flex gap-2.5" aria-hidden>
+                          <span className="h-2 w-3 rounded-full bg-lantern shadow-[0_0_8px_var(--lantern)]" />
+                          <span className="h-2 w-3 rounded-full bg-lantern shadow-[0_0_8px_var(--lantern)]" />
+                        </span>
+                      </span>
+                    ) : portraits[s.id] ? (
                       <motion.img
                         src={portraits[s.id]}
                         alt={s.character.name}
@@ -197,7 +204,9 @@ export default function BuildTheater({ params }: { params: Promise<{ id: string 
                     )}
                   </AnimatePresence>
                 </div>
-                <span className="text-xs leading-tight text-text-soft">{s.character.name}</span>
+                <span className="text-xs leading-tight text-text-soft">
+                  {(s.type === "riddle-hunt" || s.type === "picture-fragment") && game?.mode !== "host" ? "Hiding" : s.character.name}
+                </span>
               </div>
             ))}
           </div>

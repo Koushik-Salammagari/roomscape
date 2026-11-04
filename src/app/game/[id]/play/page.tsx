@@ -232,9 +232,16 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
                     )}
                   >
                     <span className="relative size-14 shrink-0 overflow-hidden rounded-full border border-ink-line bg-night-deep">
-                      {s.character.art ? (
+                      {b.art ?? s.character.art ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={s.character.art} alt="" className={clsx("h-full w-full object-cover", !b.open && "grayscale")} />
+                        <img src={b.art ?? s.character.art} alt="" className={clsx("h-full w-full object-cover", !b.open && "grayscale")} />
+                      ) : s.hiding ? (
+                        <span className="grid h-full w-full place-items-center">
+                          <span className="flex gap-2" aria-hidden>
+                            <span className="h-1.5 w-2.5 rounded-full bg-lantern shadow-[0_0_6px_var(--lantern)]" />
+                            <span className="h-1.5 w-2.5 rounded-full bg-lantern shadow-[0_0_6px_var(--lantern)]" />
+                          </span>
+                        </span>
                       ) : (
                         <span className="grid h-full w-full place-items-center font-display text-xl text-lantern">{i + 1}</span>
                       )}
@@ -245,7 +252,7 @@ export default function Play({ params }: { params: Promise<{ id: string }> }) {
                       </span>
                       <span className="truncate font-display text-lg">{s.title}</span>
                       <span className={clsx("text-sm", b.solved ? "text-tide" : b.open ? "text-lantern" : "text-text-soft")}>
-                        {b.solved ? `Solved: digit ${b.digit}` : b.open ? `${s.character.name} is waiting` : lockedReason[s.id]}
+                        {b.solved ? `Solved: digit ${b.digit}` : b.open ? (s.hiding ? `${s.character.name} is hiding somewhere` : `${s.character.name} is waiting`) : lockedReason[s.id]}
                       </span>
                     </span>
                   </button>

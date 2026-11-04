@@ -103,7 +103,8 @@ Make exactly ${count} stations, in this order of types: ${brief.types.join(", ")
 Every station uses a DIFFERENT object, and every objectId must be copied exactly from the room list. Never invent objects or details.
 ${brief.pinned.length ? `These objects must each be used by a station: ${brief.pinned.join(", ")}.` : ""}
 
-Each object in a station speaks as a character: give it a name that suits both the object and the story, a one-line persona, a greeting of at most 20 words, and a voice (low, high, warm, crisp or creaky).
+Each object in a station speaks as a character: give it a name that suits the story, a one-line persona, a greeting of at most 20 words, and a voice (low, high, warm, crisp or creaky).
+In riddle-hunt and picture-fragment stations the character IS the object being searched for and is speaking from hiding: its name, persona and greeting must not reveal what kind of object it is (no "Old Wick" for a lamp). It can tease, for example "You are closer than you think."
 
 Station rules:
 - riddle-hunt: "prompt" is a riddle of 2 to 4 short lines that leads to the object through its look, use or a verified detail. It must not contain the object's name or an obvious synonym. "answer" is the objectId. The object must be reachable.
@@ -151,6 +152,11 @@ export function stationProblems(s: DesignStation, game: Game, brief: Brief): str
   if (s.type === "riddle-hunt" || s.type === "picture-fragment") {
     if (!object.reachable) problems.push(`the ${object.name} is not reachable`);
     if (s.answer !== s.objectId) problems.push("the answer must be the objectId");
+  }
+  if (s.type === "riddle-hunt" || s.type === "picture-fragment") {
+    const said = `${s.character.name} ${s.character.greeting}`.toLowerCase();
+    const giveaway = nameWords(object.name).filter((w) => said.includes(w));
+    if (giveaway.length) problems.push(`the hiding character's name or greeting gives away "${giveaway.join(", ")}"`);
   }
   if (s.type === "riddle-hunt") {
     const prompt = s.prompt.toLowerCase();
@@ -258,12 +264,15 @@ async function blindSolve(
 function templateStation(type: StationType, game: Game, used: Set<string>, title: string): DesignStation | null {
   const pool = clueObjects(game).filter((o) => !used.has(o.id));
   const voice = "warm" as const;
-  const character = (name: string) => ({
-    name: `The ${name}`,
-    persona: `The ${name}, who has been watching this room for years.`,
-    greeting: `You found me. I have been keeping a secret for you.`,
-    voice,
-  });
+  const character = (name: string, hiding = false) =>
+    hiding
+      ? { name: "The Hidden One", persona: "Something in this room that loves hide and seek.", greeting: "I am hiding somewhere in this room. Find me.", voice }
+      : {
+          name: `The ${name}`,
+          persona: `The ${name}, who has been watching this room for years.`,
+          greeting: "You found me. I have been keeping a secret for you.",
+          voice,
+        };
 
   if (type === "riddle-hunt" || type === "picture-fragment") {
     const o = pool.find((p) => p.reachable && p.facts.some((f) => f.verified)) ?? pool.find((p) => p.reachable);
@@ -273,7 +282,7 @@ function templateStation(type: StationType, game: Game, used: Set<string>, title
       type,
       objectId: o.id,
       title,
-      character: character(o.name),
+      character: character(o.name, true),
       prompt:
         type === "riddle-hunt"
           ? `Look for something ${detail ? `whose ${detail.about} is ${detail.value}` : "you pass every day"}. It has been waiting for you.`

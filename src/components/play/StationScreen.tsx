@@ -13,14 +13,14 @@ import { postJSON } from "@/lib/client/game";
 import { cue } from "@/lib/client/player";
 import type { PlayerGame } from "@/lib/game/view";
 
-export type BoardStation = { id: string; open: boolean; solved: boolean; digit?: number; hintsShown: number; shownHints: string[] };
+export type BoardStation = { id: string; open: boolean; solved: boolean; digit?: number; art?: string; hintsShown: number; shownHints: string[] };
 export type Board = { startedAt: string; finishedAt?: string; stations: BoardStation[]; allSolved: boolean; hints: number; stars?: number };
 type PlanStation = NonNullable<PlayerGame["plan"]>["stations"][number];
 type Attempt =
   | { kind: "text"; value: string }
   | { kind: "tap"; frame: number; x: number; y: number }
   | { kind: "photo"; dataUrl: string; width: number; height: number };
-type AnswerReply = FindResult & { digit?: number; state: Board };
+type AnswerReply = FindResult & { digit?: number; art?: string; state: Board };
 
 type Props = {
   gameId: string;
@@ -50,6 +50,9 @@ export function StationScreen({ gameId, game, station, board, index, player, onB
   const [hints, setHints] = useState<string[]>(board.shownHints);
   const shake = useAnimationControls();
   const foundDigit = useRef<number | undefined>(undefined);
+  const [art, setArt] = useState<string | undefined>(board.art ?? station.character.art);
+  const crop = station.objectId ? game.room.objects.find((o) => o.id === station.objectId)?.crop : undefined;
+  const hiding = Boolean(station.hiding) && solvedDigit === undefined;
 
   const send = async (attempt: Attempt): Promise<AnswerReply> => {
     const reply = await postJSON<AnswerReply>(`/api/games/${gameId}/play/answer`, { player, stationId: station.id, attempt });
@@ -60,8 +63,9 @@ export function StationScreen({ gameId, game, station, board, index, player, onB
   const handle = (reply: AnswerReply) => {
     if (reply.correct) {
       cue("unlock");
+      if (reply.art) setArt(reply.art);
       setSolvedDigit(reply.digit);
-      setLine("You found it. Here’s your digit for the final lock.");
+      setLine(station.hiding ? "You found me! Here’s your digit for the final lock." : "You solved it. Here’s your digit for the final lock.");
     } else {
       cue("wrong");
       setLine(reply.message ?? "Not quite.");
@@ -121,7 +125,7 @@ export function StationScreen({ gameId, game, station, board, index, player, onB
         </header>
 
         <h1 className="font-display text-[2rem] leading-tight">{station.title}</h1>
-        <Character name={station.character.name} art={station.character.art} line={line} />
+        <Character name={station.character.name} art={art} crop={crop} hiding={hiding} voice={station.character.voice} line={line} />
 
         {solvedDigit !== undefined ? (
           <div className="relative flex flex-col items-center gap-4 py-8">
@@ -214,7 +218,10 @@ export function StationScreen({ gameId, game, station, board, index, player, onB
             onClose={() => setCamera(false)}
             onShot={async (shot: Shot) => {
               const reply = await send({ kind: "photo", ...shot });
-              if (reply.correct) foundDigit.current = reply.digit;
+              if (reply.correct) {
+                foundDigit.current = reply.digit;
+                if (reply.art) setArt(reply.art);
+              }
               else cue("wrong");
               return reply;
             }}
@@ -222,7 +229,7 @@ export function StationScreen({ gameId, game, station, board, index, player, onB
               setCamera(false);
               cue("unlock");
               setSolvedDigit(foundDigit.current);
-              setLine("You found it. Here’s your digit for the final lock.");
+              setLine("You found me! Here’s your digit for the final lock.");
             }}
           />
         ) : null}

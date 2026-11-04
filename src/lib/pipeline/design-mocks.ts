@@ -17,7 +17,7 @@ export function mockDesign(brief: Brief): DesignReply {
       const o = take((x) => x.reachable)!;
       return {
         type, objectId: o.id, title: "The first light",
-        character: { name: "Old Wick", persona: "A sleepy, poetic lamp who remembers the captain.", greeting: "Ah, a visitor. I kept the captain's secret burning.", voice },
+        character: { name: "The Night Watch", persona: "A sleepy, poetic keeper of the captain's secret.", greeting: "I am hiding somewhere in this room. Follow the riddle.", voice },
         prompt: "I sleep all day and wake at dusk,\nI stand on one leg and never walk.\nFind me where the shadows start.",
         answer: o.id,
         hints: ["I only work when the sun goes down.", "Look for something tall that gives light.", `It is the ${o.name}: it lights the room at night.`],

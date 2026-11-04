@@ -33,7 +33,9 @@ export function playerView(game: Game) {
             id: s.id,
             type: s.type,
             title: s.title,
-            character: s.character,
+            // A hiding character's portrait would give the answer away; it is revealed when found.
+            character: s.type === "riddle-hunt" || s.type === "picture-fragment" ? { ...s.character, art: undefined } : s.character,
+            hiding: s.type === "riddle-hunt" || s.type === "picture-fragment",
             prompt: s.prompt,
             statements: s.statements,
             options: s.options,
